@@ -244,7 +244,7 @@ Work through phases in order. Each phase is independently usable.
 | 2     | CRM Engine           | DONE     |
 | 3     | Terminal CLI         | DONE     |
 | 4     | Spreadsheet Import   | TODO     |
-| 5     | AI Planner — Ollama  | TODO     |
+| 5     | AI Planner — Ollama  | DONE     |
 | 6     | AI Planner — Claude  | TODO     |
 | 7     | Email Composer       | TODO     |
 | 8     | FastAPI web layer    | TODO     |

@@ -314,6 +314,65 @@ def dormant():
 
 
 # =============================================================================
+# AI COMMANDS (Phase 5)
+# =============================================================================
+
+@cli.command('brief')
+def brief():
+    """AI daily brief - who to contact this week"""
+    try:
+        from artcrm.engine import ai_planner
+
+        click.echo("\n🤖 Generating AI daily brief...\n")
+        result = ai_planner.generate_daily_brief()
+        click.echo(result)
+        click.echo()
+
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        click.echo("Make sure Ollama is running: ollama serve", err=True)
+
+
+@cli.command('score')
+@click.argument('contact_id', type=int)
+def score(contact_id):
+    """AI fit score for a contact"""
+    try:
+        from artcrm.engine import ai_planner
+
+        click.echo(f"\n🤖 Analyzing contact #{contact_id}...\n")
+        result = ai_planner.score_contact_fit(contact_id)
+
+        click.echo(f"Fit Score: {result['fit_score']}/100")
+        click.echo(f"\nReasoning:\n{result['reasoning']}")
+        click.echo(f"\nSuggested Approach:\n{result['suggested_approach']}")
+        click.echo()
+
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+
+
+@cli.command('suggest')
+@click.option('--limit', default=5, help='Number of suggestions')
+def suggest(limit):
+    """AI suggests next contacts to reach out to"""
+    try:
+        from artcrm.engine import ai_planner
+
+        click.echo(f"\n🤖 Getting AI suggestions for next {limit} contacts...\n")
+        results = ai_planner.suggest_next_contacts(limit=limit)
+
+        for r in results:
+            contact = r['contact']
+            click.echo(f"• {contact.name} ({contact.city})")
+            click.echo(f"  Type: {contact.type}, Fit: {contact.fit_score or 'N/A'}/100")
+            click.echo()
+
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+
+
+# =============================================================================
 # MAIN
 # =============================================================================
 
