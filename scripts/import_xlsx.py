@@ -361,12 +361,15 @@ def import_contacts_leads(db: DatabaseConnection, excel_file) -> Tuple[int, int,
 
         first_contact_date = row[3] if len(row) > 3 and pd.notna(row[3]) else None
 
-        # Convert to date if it's a timestamp
+        # Convert to date if it's a timestamp, or None if it's not a date
         if first_contact_date:
             if isinstance(first_contact_date, pd.Timestamp):
                 first_contact_date = first_contact_date.date()
             elif isinstance(first_contact_date, datetime):
                 first_contact_date = first_contact_date.date()
+            else:
+                # Not a date (e.g., "yes" or other text), set to None
+                first_contact_date = None
 
         attempts = [
             (3, 'first contact', 0),   # col, label, months_offset
@@ -436,6 +439,203 @@ def import_contacts_leads(db: DatabaseConnection, excel_file) -> Tuple[int, int,
     return (created, updated, skipped)
 
 
+def import_show_dates(db: DatabaseConnection, excel_file) -> int:
+    """
+    Import show dates sheet.
+    Returns: number of shows created
+    """
+    logging.info("=" * 80)
+    logging.info("IMPORTING: show dates")
+    logging.info("=" * 80)
+
+    df = pd.read_excel(excel_file, sheet_name="show dates", header=None)
+
+    created = 0
+
+    # Get all contacts for fuzzy matching venues
+    if not db.dry_run:
+        db.execute("SELECT id, name FROM contacts WHERE deleted_at IS NULL")
+        contacts = [dict(row) for row in db.fetchall()]
+    else:
+        contacts = []
+
+    # Data starts around row 4
+    for idx in range(4, len(df)):
+        row = df.iloc[idx]
+
+        # Column 1: month, Column 2: dates, Column 3: venue, Column 4: notes/theme
+        venue_name = row[3] if len(row) > 3 and pd.notna(row[3]) else None
+        if not venue_name or venue_name == 'venue':
+            continue
+
+        month_str = row[1] if len(row) > 1 and pd.notna(row[1]) else None
+        date_str = row[2] if len(row) > 2 and pd.notna(row[2]) else None
+        theme = row[4] if len(row) > 4 and pd.notna(row[4]) else None
+
+        # Try to parse dates (this is rough, real dates would need better parsing)
+        date_start = None
+        date_end = None
+
+        if isinstance(date_str, pd.Timestamp) or isinstance(date_str, datetime):
+            date_start = date_str.date() if isinstance(date_str, datetime) else date_str
+
+        # Fuzzy match venue to contacts
+        venue_contact_id = fuzzy_match_venue(venue_name, contacts, threshold=70)
+
+        show_data = {
+            'name': f"{venue_name} - {month_str}" if month_str else venue_name,
+            'venue_contact_id': venue_contact_id,
+            'city': None,  # Would need to extract
+            'date_start': date_start,
+            'date_end': date_end,
+            'theme': str(theme) if theme else None,
+            'status': 'possible',  # Default status
+            'notes': None,
+        }
+
+        logging.info(f"Creating show: {show_data['name']}")
+
+        if not db.dry_run:
+            db.execute("""
+                INSERT INTO shows (
+                    name, venue_contact_id, city, date_start, date_end,
+                    theme, status, notes, created_at, updated_at
+                ) VALUES (
+                    %(name)s, %(venue_contact_id)s, %(city)s, %(date_start)s,
+                    %(date_end)s, %(theme)s, %(status)s, %(notes)s, NOW(), NOW()
+                )
+            """, show_data)
+
+        created += 1
+
+    logging.info(f"Shows: {created} created")
+    return created
+
+
+def import_online_platforms(db: DatabaseConnection, excel_file) -> int:
+    """
+    Import online platforms sheet.
+    Returns: number of platforms created
+    """
+    logging.info("=" * 80)
+    logging.info("IMPORTING: on line")
+    logging.info("=" * 80)
+
+    df = pd.read_excel(excel_file, sheet_name="on line", header=None)
+
+    created = 0
+    existing_names = {}
+
+    # Row 1 appears to be headers: Col 2: name, Col 9: website
+    # Data starts around row 4
+    for idx in range(4, len(df)):
+        row = df.iloc[idx]
+
+        # Column 2: platform name
+        name = row[2] if len(row) > 2 and pd.notna(row[2]) else None
+        if not name or name in ['on line sales options', 'HAVE:', 'General Online Sites', 'Online galleries']:
+            continue
+
+        # Column 9: website
+        website = row[9] if len(row) > 9 and pd.notna(row[9]) else None
+
+        # Column 6: cost/commission
+        cost_notes = row[6] if len(row) > 6 and pd.notna(row[6]) else None
+
+        # Column 7: notes
+        notes = row[7] if len(row) > 7 and pd.notna(row[7]) else None
+
+        # Column 8: country
+        country = row[8] if len(row) > 8 and pd.notna(row[8]) else None
+
+        # Combine notes
+        full_notes = []
+        if cost_notes:
+            full_notes.append(f"Commission: {cost_notes}")
+        if notes:
+            full_notes.append(str(notes))
+
+        contact_data = {
+            'name': make_unique_name(name, 'online', existing_names),
+            'type': 'online_platform',
+            'subtype': None,
+            'city': 'online',
+            'country': country if country and len(str(country)) == 2 else None,
+            'address': None,
+            'website': str(website) if website else None,
+            'email': None,
+            'phone': None,
+            'preferred_language': 'en',  # Default for online platforms
+            'status': 'cold',
+            'notes': ' | '.join(full_notes) if full_notes else None,
+        }
+
+        dedup_key = make_dedup_key(name, 'online')
+        contact_id = get_or_create_contact(db, contact_data, dedup_key)
+
+        if contact_id:
+            created += 1
+        elif db.dry_run:
+            created += 1
+
+    logging.info(f"Online platforms: {created} created")
+    return created
+
+
+def export_notes_sheets(excel_file) -> int:
+    """
+    Export notes sheets to markdown files.
+    Returns: number of files created
+    """
+    logging.info("=" * 80)
+    logging.info("EXPORTING: notes sheets to markdown")
+    logging.info("=" * 80)
+
+    NOTES_DIR.mkdir(exist_ok=True)
+
+    notes_sheets = [
+        'plans',
+        'notes  ideas',
+        'gofundme options',
+        'notes - live painting',
+        'helpers',
+        'ideas',
+    ]
+
+    created = 0
+
+    for sheet_name in notes_sheets:
+        if sheet_name not in excel_file.sheet_names:
+            continue
+
+        try:
+            df = pd.read_excel(excel_file, sheet_name=sheet_name, header=None)
+
+            # Convert to markdown
+            filename = sheet_name.replace(' ', '_').replace('-', '_') + '.md'
+            filepath = NOTES_DIR / filename
+
+            with open(filepath, 'w') as f:
+                f.write(f"# {sheet_name}\n\n")
+                f.write(f"Exported from art-marketing.xlsx on {datetime.now().strftime('%Y-%m-%d')}\n\n")
+                f.write("---\n\n")
+
+                # Write non-empty rows
+                for idx, row in df.iterrows():
+                    row_text = ' | '.join([str(val) for val in row if pd.notna(val)])
+                    if row_text.strip():
+                        f.write(f"{row_text}\n\n")
+
+            logging.info(f"Exported: {filename}")
+            created += 1
+
+        except Exception as e:
+            logging.error(f"Error exporting sheet '{sheet_name}': {e}")
+
+    logging.info(f"Notes files: {created} created in {NOTES_DIR}")
+    return created
+
+
 # =============================================================================
 # MAIN IMPORT ORCHESTRATOR
 # =============================================================================
@@ -495,12 +695,31 @@ def run_import(dry_run: bool = False, log_level: str = "INFO"):
         logging.error(f"Error importing contacts: {e}", exc_info=True)
         stats['errors'] += 1
 
-    # TODO: Import other sheets
-    # - current channels
-    # - show dates
-    # - on line
-    # - stats
-    # - notes files
+    # Import show dates
+    try:
+        with DatabaseConnection(dry_run=dry_run) as db:
+            created = import_show_dates(db, excel_file)
+            stats['shows_created'] += created
+    except Exception as e:
+        logging.error(f"Error importing shows: {e}", exc_info=True)
+        stats['errors'] += 1
+
+    # Import online platforms
+    try:
+        with DatabaseConnection(dry_run=dry_run) as db:
+            created = import_online_platforms(db, excel_file)
+            stats['contacts_created'] += created
+    except Exception as e:
+        logging.error(f"Error importing online platforms: {e}", exc_info=True)
+        stats['errors'] += 1
+
+    # Export notes sheets to markdown
+    try:
+        created = export_notes_sheets(excel_file)
+        # (no stat tracking for notes files)
+    except Exception as e:
+        logging.error(f"Error exporting notes: {e}", exc_info=True)
+        stats['errors'] += 1
 
     # Print summary
     logging.info("=" * 80)

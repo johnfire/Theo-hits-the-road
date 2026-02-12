@@ -1,0 +1,75 @@
+name: Art CRM CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: artcrm_admindude
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: artcrm_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Set up database
+      env:
+        DATABASE_URL: postgresql://artcrm_admindude:test_password@localhost:5432/artcrm_test
+      run: |
+        psql -U artcrm_admindude -h localhost -d artcrm_test -f artcrm/db/migrations/001_initial_schema.sql
+        psql -U artcrm_admindude -h localhost -d artcrm_test -f artcrm/db/migrations/002_seed_lookup_values.sql
+      env:
+        PGPASSWORD: test_password
+
+    - name: Run CRM Engine tests
+      env:
+        DATABASE_URL: postgresql://artcrm_admindude:test_password@localhost:5432/artcrm_test
+      run: |
+        python scripts/test_crm.py
+
+    - name: Check Python code style (optional)
+      run: |
+        # Install and run basic linting if desired
+        # pip install flake8
+        # flake8 artcrm/ --count --select=E9,F63,F7,F82 --show-source --statistics
+      continue-on-error: true
+
+    - name: Run import test (dry-run)
+      env:
+        DATABASE_URL: postgresql://artcrm_admindude:test_password@localhost:5432/artcrm_test
+      run: |
+        # Only run if data file exists (not in repo by default)
+        if [ -f "data/art-marketing.xlsx" ]; then
+          python scripts/import_xlsx.py --dry-run
+        else
+          echo "Skipping import test - no data file"
+        fi
+      continue-on-error: true

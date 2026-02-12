@@ -241,7 +241,7 @@ Work through phases in order. Each phase is independently usable.
 | Phase | Deliverable          | Status   |
 |-------|----------------------|----------|
 | 1     | Database + schema    | DONE     |
-| 2     | CRM Engine           | TODO     |
+| 2     | CRM Engine           | DONE     |
 | 3     | Terminal CLI         | TODO     |
 | 4     | Spreadsheet Import   | TODO     |
 | 5     | AI Planner — Ollama  | TODO     |
