@@ -181,6 +181,8 @@ crm score <id>                 AI fit score for a contact
 crm suggest [--limit N]        AI suggests next contacts to reach out to
 crm draft <id>                 AI draft first contact letter (Claude API)
 crm followup <id>              AI draft follow-up letter (Claude API)
+crm recon <city> [country]     Scout city for leads (galleries, cafes, coworking)
+                               Options: --type, --radius, --model (claude/ollama)
 crm shows list                 list upcoming shows
 crm shows add                  add a show
 crm overdue                    show contacts with overdue follow-ups

@@ -454,6 +454,93 @@ def followup(contact_id, language):
 
 
 # =============================================================================
+# LEAD GENERATION (Phase 6-Alpha)
+# =============================================================================
+
+@cli.command('recon')
+@click.argument('city')
+@click.argument('country', default='DE')
+@click.option('--type', 'types', multiple=True, help='Business types to search (gallery, cafe, coworking)')
+@click.option('--radius', default=10.0, help='Search radius in km (default: 10)')
+@click.option('--model', type=click.Choice(['claude', 'ollama']), default='ollama', help='AI model for enrichment')
+@click.option('--no-google', is_flag=True, help='Skip Google Maps API')
+@click.option('--no-osm', is_flag=True, help='Skip OpenStreetMap')
+def recon(city, country, types, radius, model, no_google, no_osm):
+    """Scout a city for potential leads (galleries, cafes, coworking spaces)"""
+    try:
+        from artcrm.engine import lead_scout
+
+        click.echo(f"\n🎯 Starting reconnaissance mission for {city}, {country}\n")
+
+        # Default types if none specified
+        if not types:
+            types = ['gallery', 'cafe', 'coworking']
+        else:
+            # Validate types
+            valid_types = {'gallery', 'cafe', 'coworking'}
+            for t in types:
+                if t not in valid_types:
+                    click.echo(f"Warning: Unknown type '{t}'. Valid types: {', '.join(valid_types)}", err=True)
+
+        click.echo(f"Target types: {', '.join(types)}")
+        click.echo(f"Search radius: {radius} km")
+        click.echo(f"AI model: {model}")
+        click.echo(f"Data sources: ", nl=False)
+
+        sources = []
+        if not no_google:
+            sources.append("Google Maps")
+        if not no_osm:
+            sources.append("OpenStreetMap")
+
+        click.echo(', '.join(sources) if sources else 'None (this will not work!)')
+        click.echo()
+
+        if not sources:
+            click.echo("Error: All data sources disabled. Enable at least one source.", err=True)
+            return
+
+        # Run scout
+        stats = lead_scout.scout_city(
+            city=city,
+            country=country,
+            business_types=list(types),
+            radius_km=radius,
+            ai_model=model,
+            use_google_maps=not no_google,
+            use_osm=not no_osm,
+            skip_duplicates=True
+        )
+
+        # Display results
+        click.echo(f"\n{'='*80}")
+        click.echo(f"RECONNAISSANCE COMPLETE")
+        click.echo(f"{'='*80}")
+        click.echo(f"\nCity: {stats['city']}, {stats['country']}")
+        click.echo(f"Data sources: {', '.join(stats['sources_used'])}")
+        click.echo(f"\nResults by type:")
+        for biz_type, count in stats['by_type'].items():
+            click.echo(f"  {biz_type}: {count} venues found")
+
+        click.echo(f"\nTotal found: {stats['total_found']}")
+        click.echo(f"Inserted: {stats['total_inserted']}")
+        click.echo(f"Skipped (duplicates): {stats['total_skipped']}")
+
+        click.echo(f"\n✓ Mission complete!")
+        click.echo(f"\nNext steps:")
+        click.echo(f"  • Review leads: ./crm contacts list --status lead_unverified")
+        click.echo(f"  • Score a lead: ./crm score <contact_id>")
+        click.echo(f"  • Draft letter: ./crm draft <contact_id>")
+        click.echo()
+
+    except ImportError as e:
+        click.echo(f"Error: Missing dependencies. Run: pip install -r requirements.txt", err=True)
+        click.echo(f"Details: {e}", err=True)
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+
+
+# =============================================================================
 # MAIN
 # =============================================================================
 

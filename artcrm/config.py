@@ -32,6 +32,11 @@ class Config:
     OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3')
     ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY', '')
 
+    # Lead Generation (Phase 6-Alpha)
+    GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY', '')
+    LEAD_SCOUT_BATCH_SIZE = int(os.getenv('LEAD_SCOUT_BATCH_SIZE', '20'))
+    LEAD_SCOUT_RATE_LIMIT_SECONDS = float(os.getenv('LEAD_SCOUT_RATE_LIMIT_SECONDS', '1.0'))
+
     # Email Configuration (Phase 7+)
     SMTP_HOST = os.getenv('SMTP_HOST', '')
     SMTP_PORT = int(os.getenv('SMTP_PORT', '587'))

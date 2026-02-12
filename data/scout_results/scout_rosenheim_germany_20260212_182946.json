@@ -1,0 +1,23 @@
+{
+  "stats": {
+    "city": "rosenheim",
+    "country": "germany",
+    "types_searched": [
+      "gallery",
+      "cafe",
+      "coworking"
+    ],
+    "sources_used": [],
+    "total_found": 0,
+    "total_inserted": 0,
+    "total_skipped": 0,
+    "by_type": {
+      "gallery": 0,
+      "cafe": 0,
+      "coworking": 0
+    },
+    "timestamp": "2026-02-12T18:29:34.516170"
+  },
+  "candidates": [],
+  "inserted_ids": []
+}

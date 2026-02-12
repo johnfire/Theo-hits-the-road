@@ -81,3 +81,8 @@ EVENT_SUGGESTION_READY = 'suggestion_ready'
 EVENT_DRAFT_REQUESTED = 'draft_requested'
 EVENT_DRAFT_READY = 'draft_ready'
 EVENT_EMAIL_SENT = 'email_sent'
+
+# Lead Scout Events (Phase 6-Alpha)
+EVENT_SCOUT_STARTED = 'scout_started'
+EVENT_SCOUT_COMPLETE = 'scout_complete'
+EVENT_LEAD_DISCOVERED = 'lead_discovered'
