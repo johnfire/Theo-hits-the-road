@@ -1,0 +1,20 @@
+#!/bin/bash
+# Art CRM CLI Wrapper
+# Activates venv and runs CLI
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Activate venv if not already activated
+if [ -z "$VIRTUAL_ENV" ]; then
+    source venv/bin/activate
+fi
+
+# Run CLI
+python3 -c "
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd()))
+from artcrm.cli.main import cli
+cli()
+" "$@"
