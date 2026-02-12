@@ -20,7 +20,7 @@ online channels, and contact history. Full architecture in docs/art_crm_architec
 ---
 
 ## Tech Stack
-- **Language:** Python 3.11+
+- **Language:** Python 3.12
 - **Database:** PostgreSQL (local first, VPS later — see Deployment section)
 - **AI backends:** Hybrid — Ollama (local/Pi cluster) for routine tasks, Claude API for
   high-stakes writing (gallery letters, proposals)
@@ -240,7 +240,7 @@ Work through phases in order. Each phase is independently usable.
 
 | Phase | Deliverable          | Status   |
 |-------|----------------------|----------|
-| 1     | Database + schema    | TODO     |
+| 1     | Database + schema    | DONE     |
 | 2     | CRM Engine           | TODO     |
 | 3     | Terminal CLI         | TODO     |
 | 4     | Spreadsheet Import   | TODO     |

@@ -1,0 +1,21 @@
+# Art CRM Requirements
+# Python 3.12+
+
+# Database
+psycopg2-binary==2.9.9  # PostgreSQL adapter
+
+# Configuration
+python-dotenv==1.0.1    # Environment variable management
+
+# Phase 4: Import Script
+pandas==2.2.0           # Excel file reading and data manipulation
+openpyxl==3.1.2         # Excel file format support for pandas
+rapidfuzz==3.6.1        # Fuzzy string matching for venue names
+
+# Phase 2+ dependencies (not needed yet, listed for reference):
+# click==8.1.7          # CLI framework
+# pytest==7.4.3         # Testing
+# requests==2.31.0      # HTTP requests for Ollama
+# anthropic==0.21.0     # Claude API client
+# fastapi==0.109.0      # Web API framework
+# uvicorn==0.27.0       # ASGI server for FastAPI
