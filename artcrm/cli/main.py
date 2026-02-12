@@ -372,6 +372,87 @@ def suggest(limit):
         click.echo(f"Error: {e}", err=True)
 
 
+@cli.command('draft')
+@click.argument('contact_id', type=int)
+@click.option('--language', help='Override contact language (de/en/fr)')
+@click.option('--no-portfolio', is_flag=True, help='Exclude portfolio link')
+def draft(contact_id, language, no_portfolio):
+    """Draft a first contact letter using Claude API"""
+    try:
+        from artcrm.engine import email_composer
+
+        click.echo(f"\n✍️  Drafting first contact letter for contact #{contact_id}...\n")
+        click.echo("(This uses Claude API and may take a few seconds)\n")
+
+        result = email_composer.draft_first_contact_letter(
+            contact_id=contact_id,
+            language=language,
+            include_portfolio_link=not no_portfolio
+        )
+
+        click.echo(f"{'='*80}")
+        click.echo(f"TO: {result['contact_name']}")
+        click.echo(f"LANGUAGE: {result['language']}")
+        click.echo(f"{'='*80}")
+        click.echo(f"\nSUBJECT: {result['subject']}\n")
+        click.echo(result['body'])
+        click.echo(f"\n{'='*80}")
+        click.echo(f"✓ Draft saved to: {result['draft_path']}")
+        click.echo()
+
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+    except RuntimeError as e:
+        click.echo(f"API Error: {e}", err=True)
+        click.echo("Make sure ANTHROPIC_API_KEY is set in .env", err=True)
+    except Exception as e:
+        click.echo(f"Unexpected error: {e}", err=True)
+
+
+@cli.command('followup')
+@click.argument('contact_id', type=int)
+@click.option('--language', help='Override contact language (de/en/fr)')
+def followup(contact_id, language):
+    """Draft a follow-up letter using Claude API"""
+    try:
+        from artcrm.engine import email_composer
+
+        # Prompt user for context about last interaction
+        click.echo(f"\n✍️  Drafting follow-up letter for contact #{contact_id}...\n")
+
+        previous_summary = click.prompt(
+            "Brief summary of last interaction (what happened, what was discussed)",
+            type=str
+        )
+
+        click.echo("\n(This uses Claude API and may take a few seconds)\n")
+
+        result = email_composer.draft_follow_up_letter(
+            contact_id=contact_id,
+            previous_interaction_summary=previous_summary,
+            language=language
+        )
+
+        click.echo(f"{'='*80}")
+        click.echo(f"TO: {result['contact_name']}")
+        click.echo(f"TYPE: Follow-up")
+        click.echo(f"LANGUAGE: {result['language']}")
+        click.echo(f"{'='*80}")
+        click.echo(f"\nSUBJECT: {result['subject']}\n")
+        click.echo(result['body'])
+        click.echo(f"\n{'='*80}")
+        click.echo(f"✓ Draft saved to: {result['draft_path']}")
+        click.echo()
+
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+    except RuntimeError as e:
+        click.echo(f"API Error: {e}", err=True)
+        click.echo("Make sure ANTHROPIC_API_KEY is set in .env", err=True)
+    except Exception as e:
+        click.echo(f"Unexpected error: {e}", err=True)
+
+
 # =============================================================================
 # MAIN
 # =============================================================================

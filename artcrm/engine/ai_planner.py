@@ -294,7 +294,14 @@ def suggest_next_contacts(limit: int = 5) -> List[Dict[str, Any]]:
         """)
         high_fit = [Contact(**row) for row in cur.fetchall()]
 
-    candidates = list(set(overdue + high_fit))[:15]
+    # Deduplicate by ID (can't use set() on dataclasses)
+    seen_ids = set()
+    candidates = []
+    for c in (overdue + high_fit):
+        if c.id not in seen_ids:
+            seen_ids.add(c.id)
+            candidates.append(c)
+    candidates = candidates[:15]
 
     # Build prompt
     candidates_text = "\n".join([

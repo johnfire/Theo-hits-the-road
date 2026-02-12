@@ -177,11 +177,14 @@ crm contacts show <id>         full record + interaction history
 crm contacts edit <id>         edit a contact
 crm contacts log <id>          log a new interaction
 crm brief                      AI daily brief: who to contact this week
-crm draft <id>                 AI draft an outreach message for contact
-crm send <id>                  send a drafted message by email
+crm score <id>                 AI fit score for a contact
+crm suggest [--limit N]        AI suggests next contacts to reach out to
+crm draft <id>                 AI draft first contact letter (Claude API)
+crm followup <id>              AI draft follow-up letter (Claude API)
 crm shows list                 list upcoming shows
 crm shows add                  add a show
-crm import xlsx <file>         import from spreadsheet
+crm overdue                    show contacts with overdue follow-ups
+crm dormant                    show dormant contacts (12+ months)
 ```
 
 ---
@@ -243,10 +246,10 @@ Work through phases in order. Each phase is independently usable.
 | 1     | Database + schema    | DONE     |
 | 2     | CRM Engine           | DONE     |
 | 3     | Terminal CLI         | DONE     |
-| 4     | Spreadsheet Import   | TODO     |
+| 4     | Spreadsheet Import   | DONE     |
 | 5     | AI Planner — Ollama  | DONE     |
-| 6     | AI Planner — Claude  | TODO     |
-| 7     | Email Composer       | TODO     |
+| 6     | Email Composer (Claude) | DONE  |
+| 7     | Email Integration    | TODO     |
 | 8     | FastAPI web layer    | TODO     |
 | 9     | Browser UI           | TODO     |
 | 10    | Tkinter GUI          | TODO     |
