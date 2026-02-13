@@ -32,7 +32,7 @@ def contacts():
 @click.option('--type', help='Filter by type (gallery, cafe, etc.)')
 @click.option('--status', help='Filter by status (cold, contacted, etc.)')
 @click.option('--city', help='Filter by city')
-@click.option('--limit', default=50, help='Max results (default: 50)')
+@click.option('--limit', default=500, help='Max results (default: 500)')
 def contacts_list(type, status, city, limit):
     """List all contacts"""
     results = crm.search_contacts(

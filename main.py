@@ -15,11 +15,15 @@ import os
 PYTHON = sys.executable
 CRM = [PYTHON, "artcrm/cli/main.py"]
 
+# Project root on PYTHONPATH so 'artcrm' package is importable
+ENV = os.environ.copy()
+ENV["PYTHONPATH"] = os.path.dirname(os.path.abspath(__file__))
+
 
 def run(args: list[str]):
     """Run a CRM CLI command and return to menu when done."""
     print()
-    subprocess.run(CRM + args)
+    subprocess.run(CRM + args, env=ENV)
     print()
     input("  Press Enter to return to menu...")
 

@@ -56,8 +56,12 @@
 - [ ] **Monitoring** - Error tracking, performance monitoring
 - [ ] **Multi-user support** - Multiple artists sharing one CRM instance
 
-## Known Issues
-- None currently
+## Known Issues / Incomplete Work
+- [x] **Spreadsheet import** — CONFIRMED COMPLETE. All 144 real contacts imported (593 rows
+      in sheet includes blank rows, section headers, URLs — not real contacts). 207 total
+      contacts in DB is correct.
+- [ ] **Many contacts are cold/uncontacted** — ~96 contacts have no type set, many have
+      status='cold' with zero interactions. Use `crm suggest` and `crm recon` to work through them.
 
 ## Ideas / Nice to Have
 - Voice notes for interactions (record audio, auto-transcribe)
