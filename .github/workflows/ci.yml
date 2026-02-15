@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read  # minimum needed; this workflow only checks out and runs tests
+
 jobs:
   test:
     runs-on: ubuntu-latest
