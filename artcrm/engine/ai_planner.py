@@ -40,7 +40,7 @@ def call_ollama(prompt: str, system: Optional[str] = None) -> str:
 
     try:
         logger.debug(f"Calling Ollama at {url} with model {config.OLLAMA_MODEL}")
-        response = requests.post(url, json=payload, timeout=120)
+        response = requests.post(url, json=payload, timeout=(10, 60))  # (connect, read)
         response.raise_for_status()
 
         result = response.json()

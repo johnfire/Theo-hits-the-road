@@ -198,7 +198,7 @@ def search_openstreetmap(
     """
 
     try:
-        response = requests.post(overpass_url, data={'data': overpass_query}, timeout=30)
+        response = requests.post(overpass_url, data={'data': overpass_query}, timeout=30, verify=True)
         response.raise_for_status()
 
         data = response.json()

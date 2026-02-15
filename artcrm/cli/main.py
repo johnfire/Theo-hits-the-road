@@ -4,12 +4,39 @@ Art CRM Terminal CLI
 Command-line interface for all CRM operations.
 """
 
+import re
 import click
 from datetime import date, timedelta
 from typing import Optional
 
 from artcrm.engine import crm
 from artcrm.models import Contact, Interaction, Show
+
+_EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+
+
+def _prompt_date(label: str, default: Optional[date] = None) -> Optional[date]:
+    """Prompt for a date, re-prompting on bad format. Returns None if left blank."""
+    default_str = str(default) if default else ""
+    while True:
+        raw = click.prompt(label, default=default_str, show_default=bool(default_str)) or ""
+        if not raw:
+            return None
+        try:
+            return date.fromisoformat(raw)
+        except ValueError:
+            click.echo("  Invalid format — please use YYYY-MM-DD.", err=True)
+
+
+def _prompt_email() -> Optional[str]:
+    """Prompt for an email address, re-prompting on bad format. Returns None if left blank."""
+    while True:
+        raw = click.prompt("Email", default="", show_default=False) or None
+        if raw is None:
+            return None
+        if _EMAIL_RE.match(raw):
+            return raw
+        click.echo("  Invalid email address — please try again or press Enter to skip.", err=True)
 
 
 @click.group()
@@ -120,7 +147,7 @@ def contacts_add():
     city = click.prompt("City", default="", show_default=False) or None
     country = click.prompt("Country (2-letter code)", default="DE")
     website = click.prompt("Website", default="", show_default=False) or None
-    email = click.prompt("Email", default="", show_default=False) or None
+    email = _prompt_email()
     preferred_language = click.prompt("Preferred language", default="de")
     notes = click.prompt("Notes", default="", show_default=False) or None
 
@@ -153,9 +180,17 @@ def contacts_log(contact_id):
 
     click.echo(f"\n=== LOG INTERACTION: {contact.name} ===\n")
 
-    interaction_date = click.prompt("Date (YYYY-MM-DD)", default=str(date.today()))
-    method = click.prompt("Method (email/in_person/phone/letter)", default="email")
-    direction = click.prompt("Direction (outbound/inbound)", default="outbound")
+    interaction_date = _prompt_date("Date (YYYY-MM-DD)", default=date.today())
+    method = click.prompt(
+        "Method",
+        type=click.Choice(['email', 'in_person', 'phone', 'letter'], case_sensitive=False),
+        default="email"
+    )
+    direction = click.prompt(
+        "Direction",
+        type=click.Choice(['outbound', 'inbound'], case_sensitive=False),
+        default="outbound"
+    )
     summary = click.prompt("Summary")
     outcome = click.prompt("Outcome (no_reply/interested/rejected/etc)", default="no_reply")
     next_action = click.prompt("Next action", default="", show_default=False) or None
@@ -168,7 +203,7 @@ def contacts_log(contact_id):
 
     interaction = Interaction(
         contact_id=contact_id,
-        interaction_date=date.fromisoformat(interaction_date),
+        interaction_date=interaction_date,
         method=method,
         direction=direction,
         summary=summary,
@@ -252,8 +287,8 @@ def shows_add():
 
     name = click.prompt("Show name", type=str)
     city = click.prompt("City", default="", show_default=False) or None
-    date_start = click.prompt("Start date (YYYY-MM-DD)", default="", show_default=False)
-    date_end = click.prompt("End date (YYYY-MM-DD)", default="", show_default=False)
+    date_start = _prompt_date("Start date (YYYY-MM-DD, Enter to skip)")
+    date_end = _prompt_date("End date (YYYY-MM-DD, Enter to skip)")
     theme = click.prompt("Theme", default="", show_default=False) or None
     status = click.prompt("Status (possible/confirmed)", default="possible")
     notes = click.prompt("Notes", default="", show_default=False) or None
@@ -261,8 +296,8 @@ def shows_add():
     show = Show(
         name=name,
         city=city,
-        date_start=date.fromisoformat(date_start) if date_start else None,
-        date_end=date.fromisoformat(date_end) if date_end else None,
+        date_start=date_start,
+        date_end=date_end,
         theme=theme,
         status=status,
         notes=notes
