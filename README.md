@@ -282,6 +282,42 @@ FOLLOW_UP_CADENCE_MONTHS=4
 DORMANT_THRESHOLD_MONTHS=12
 ```
 
+## Development
+
+### Running tests
+
+```bash
+source venv/bin/activate
+python -m pytest tests/ -q
+```
+
+Coverage report:
+
+```bash
+python -m pytest tests/ --cov=artcrm --cov-report=term-missing
+```
+
+### Pre-commit hook
+
+A pre-commit hook is included that runs linting and the relevant tests before every commit. It blocks the commit if anything fails and shows you why.
+
+**One-time setup** (run once per clone):
+
+```bash
+git config core.hooksPath .githooks
+```
+
+After that it runs automatically on every `git commit`. What it checks:
+
+- **flake8** — syntax errors and undefined names on staged `.py` files
+- **pytest** — the test file(s) that cover whichever source files you staged; falls back to the full suite for anything unmapped
+
+To bypass in an emergency:
+
+```bash
+git commit --no-verify
+```
+
 ## Project Structure
 
 ```
