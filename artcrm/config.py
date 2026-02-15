@@ -15,8 +15,10 @@ load_dotenv(env_path)
 class Config:
     """Application configuration."""
 
-    # Database
-    DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://artcrm_admindude:aw4e0rfeA1!Q@localhost:5432/artcrm')
+    # Database — must be set in .env; never hardcode credentials here
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    if not DATABASE_URL:
+        raise ValueError("DATABASE_URL environment variable is not set. Copy .env.example to .env and configure it.")
 
     # Timezone
     TIMEZONE = os.getenv('TIMEZONE', 'Europe/Berlin')

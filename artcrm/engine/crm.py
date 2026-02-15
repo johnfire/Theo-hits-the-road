@@ -15,6 +15,23 @@ from artcrm.config import config
 
 logger = logging.getLogger(__name__)
 
+# Allowlists for dynamic UPDATE queries — column names never come from user input directly
+_CONTACT_COLUMNS = {
+    'name', 'type', 'subtype', 'city', 'country', 'address', 'website', 'email',
+    'phone', 'preferred_language', 'status', 'fit_score', 'success_probability',
+    'best_visit_time', 'notes',
+}
+_SHOW_COLUMNS = {
+    'name', 'venue_contact_id', 'city', 'date_start', 'date_end', 'theme', 'status', 'notes',
+}
+
+
+def _validate_columns(updates: Dict[str, Any], allowed: set, entity: str) -> None:
+    """Raise ValueError if any key in updates is not an allowed column name."""
+    invalid = set(updates.keys()) - allowed
+    if invalid:
+        raise ValueError(f"Invalid {entity} fields: {invalid}")
+
 
 # =============================================================================
 # CONTACT OPERATIONS
@@ -73,12 +90,14 @@ def update_contact(contact_id: int, updates: Dict[str, Any]) -> bool:
     if not updates:
         return False
 
-    # Build SET clause dynamically
+    # Guard: only known columns may appear in the SET clause
+    _validate_columns(updates, _CONTACT_COLUMNS, 'contact')
+
+    # Build SET clause — keys are validated against the allowlist above
     set_clauses = [f"{key} = %({key})s" for key in updates.keys()]
     set_clause = ', '.join(set_clauses)
 
     updates['contact_id'] = contact_id
-    updates['updated_at'] = 'NOW()'
 
     with get_db_cursor() as cur:
         cur.execute(f"""
@@ -323,6 +342,10 @@ def update_show(show_id: int, updates: Dict[str, Any]) -> bool:
     if not updates:
         return False
 
+    # Guard: only known columns may appear in the SET clause
+    _validate_columns(updates, _SHOW_COLUMNS, 'show')
+
+    # Build SET clause — keys are validated against the allowlist above
     set_clauses = [f"{key} = %({key})s" for key in updates.keys()]
     set_clause = ', '.join(set_clauses)
 
