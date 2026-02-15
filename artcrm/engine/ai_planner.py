@@ -229,7 +229,9 @@ APPROACH: [suggested approach]"""
     for line in lines:
         if line.startswith('SCORE:'):
             try:
-                fit_score = int(''.join(filter(str.isdigit, line.split(':')[1])))
+                import re as _re
+                _m = _re.search(r'-?\d+', line.split(':', 1)[1])
+                fit_score = int(_m.group()) if _m else fit_score
                 fit_score = max(0, min(100, fit_score))  # Clamp to 0-100
             except:
                 pass
