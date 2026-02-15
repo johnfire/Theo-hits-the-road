@@ -46,24 +46,16 @@ jobs:
     - name: Set up database
       env:
         DATABASE_URL: postgresql://artcrm_admindude:test_password@localhost:5432/artcrm_test
+        PGPASSWORD: test_password
       run: |
         psql -U artcrm_admindude -h localhost -d artcrm_test -f artcrm/db/migrations/001_initial_schema.sql
         psql -U artcrm_admindude -h localhost -d artcrm_test -f artcrm/db/migrations/002_seed_lookup_values.sql
-      env:
-        PGPASSWORD: test_password
 
-    - name: Run CRM Engine tests
+    - name: Run tests
       env:
         DATABASE_URL: postgresql://artcrm_admindude:test_password@localhost:5432/artcrm_test
       run: |
-        python scripts/test_crm.py
-
-    - name: Check Python code style (optional)
-      run: |
-        # Install and run basic linting if desired
-        # pip install flake8
-        # flake8 artcrm/ --count --select=E9,F63,F7,F82 --show-source --statistics
-      continue-on-error: true
+        python -m pytest tests/ -q
 
     - name: Run import test (dry-run)
       env:
