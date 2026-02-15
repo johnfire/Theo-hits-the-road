@@ -25,6 +25,7 @@ tqdm==4.66.4          # Progress bars (4.66.1 had CVE-2024-34062)
 # Testing
 pytest==7.4.3         # Testing framework
 pytest-cov==4.1.0     # Coverage reporting
+flake8==7.0.0         # Linting (pre-commit hook + CI)
 
 # Future dependencies:
 # fastapi==0.109.0      # Web API framework
