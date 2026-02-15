@@ -4,6 +4,7 @@ Loads settings from environment variables with sensible defaults.
 """
 
 import os
+import warnings
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -50,3 +51,13 @@ class Config:
 
 # Singleton instance
 config = Config()
+
+# Warn if Ollama is reachable only over plain HTTP on a non-local network.
+# Prompts contain sensitive contact/business data; HTTPS should be used for remote hosts.
+_ollama_url = config.OLLAMA_BASE_URL
+if _ollama_url.startswith("http://") and "localhost" not in _ollama_url and "127.0.0.1" not in _ollama_url:
+    warnings.warn(
+        f"OLLAMA_BASE_URL is set to a non-local address over plain HTTP ({_ollama_url}). "
+        "AI prompts contain sensitive data — use HTTPS for remote Ollama hosts.",
+        stacklevel=2,
+    )

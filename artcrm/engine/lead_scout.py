@@ -185,7 +185,7 @@ def search_openstreetmap(
     osm_query = osm_queries.get(business_type, '["amenity"="*"]')
 
     # Overpass API query
-    overpass_url = "http://overpass-api.de/api/interpreter"
+    overpass_url = "https://overpass-api.de/api/interpreter"
     overpass_query = f"""
     [out:json][timeout:25];
     area["name"="{city}"]["admin_level"~"[4-8]"]->.searchArea;

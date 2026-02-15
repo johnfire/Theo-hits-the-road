@@ -44,7 +44,7 @@ def prompt_optional(label: str) -> str:
 
 
 def clear():
-    os.system("cls" if os.name == "nt" else "clear")
+    subprocess.run(["cls"] if os.name == "nt" else ["clear"], check=False)
 
 
 # =============================================================================
