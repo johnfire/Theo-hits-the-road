@@ -20,7 +20,7 @@ anthropic==0.39.0     # Claude API client
 # Phase 6-Alpha: Lead Generation
 googlemaps==4.10.0    # Google Maps Places API client
 beautifulsoup4==4.12.3  # HTML parsing for web scraping
-tqdm==4.66.1          # Progress bars
+tqdm==4.66.3          # Progress bars
 
 # Testing
 pytest==7.4.3         # Testing framework
