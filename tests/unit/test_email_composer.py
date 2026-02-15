@@ -302,7 +302,7 @@ def test_draft_first_contact_portfolio_link_in_prompt_when_requested(tmp_path):
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         draft_first_contact_letter(1, include_portfolio_link=True)
     prompt = mock_claude.call_args[0][0]
-    assert 'artbychristopherrehm.com' in prompt
+    assert 'https://www.artbychristopherrehm.com' in prompt
 
 
 def test_draft_first_contact_no_portfolio_link_when_false(tmp_path):
@@ -312,7 +312,7 @@ def test_draft_first_contact_no_portfolio_link_when_false(tmp_path):
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         draft_first_contact_letter(1, include_portfolio_link=False)
     prompt = mock_claude.call_args[0][0]
-    assert 'artbychristopherrehm.com' not in prompt
+    assert 'https://www.artbychristopherrehm.com' not in prompt
 
 
 # ---------------------------------------------------------------------------
