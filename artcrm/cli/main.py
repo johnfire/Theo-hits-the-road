@@ -4,6 +4,7 @@ Art CRM Terminal CLI
 Command-line interface for all CRM operations.
 """
 
+import logging
 import re
 import click
 from datetime import date, timedelta
@@ -11,12 +12,15 @@ from typing import Optional
 
 from artcrm.engine import crm
 from artcrm.models import Contact, Interaction, Show
+from artcrm.logging_config import configure_logging, log_call
 
 _EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
 
 
+@log_call
 def _prompt_date(label: str, default: Optional[date] = None) -> Optional[date]:
     """Prompt for a date, re-prompting on bad format. Returns None if left blank."""
+    logger = logging.getLogger("artcrm")
     default_str = str(default) if default else ""
     while True:
         raw = click.prompt(label, default=default_str, show_default=bool(default_str)) or ""
@@ -25,24 +29,28 @@ def _prompt_date(label: str, default: Optional[date] = None) -> Optional[date]:
         try:
             return date.fromisoformat(raw)
         except ValueError:
+            logger.debug(f"_prompt_date | rejected input={raw!r}")
             click.echo("  Invalid format — please use YYYY-MM-DD.", err=True)
 
 
+@log_call
 def _prompt_email() -> Optional[str]:
     """Prompt for an email address, re-prompting on bad format. Returns None if left blank."""
+    logger = logging.getLogger("artcrm")
     while True:
         raw = click.prompt("Email", default="", show_default=False) or None
         if raw is None:
             return None
         if _EMAIL_RE.match(raw):
             return raw
+        logger.debug(f"_prompt_email | rejected input={raw!r}")
         click.echo("  Invalid email address — please try again or press Enter to skip.", err=True)
 
 
 @click.group()
 def cli():
     """Art CRM - Gallery & Contact Management System"""
-    pass
+    configure_logging()
 
 
 # =============================================================================
@@ -60,6 +68,7 @@ def contacts():
 @click.option('--status', help='Filter by status (cold, contacted, etc.)')
 @click.option('--city', help='Filter by city')
 @click.option('--limit', default=500, help='Max results (default: 500)')
+@log_call
 def contacts_list(type, status, city, limit):
     """List all contacts"""
     results = crm.search_contacts(
@@ -87,11 +96,14 @@ def contacts_list(type, status, city, limit):
 
 @contacts.command('show')
 @click.argument('contact_id', type=int)
+@log_call
 def contacts_show(contact_id):
     """Show full contact details"""
+    logger = logging.getLogger("artcrm")
     contact = crm.get_contact(contact_id)
 
     if not contact:
+        logger.warning(f"contacts_show | contact_id={contact_id} not found")
         click.echo(f"Contact ID {contact_id} not found.", err=True)
         return
 
@@ -137,6 +149,7 @@ def contacts_show(contact_id):
 
 
 @contacts.command('add')
+@log_call
 def contacts_add():
     """Add a new contact (interactive)"""
     click.echo("\n=== ADD NEW CONTACT ===\n")
@@ -170,11 +183,15 @@ def contacts_add():
 
 @contacts.command('log')
 @click.argument('contact_id', type=int)
+@log_call
 def contacts_log(contact_id):
     """Log an interaction with a contact"""
+    logger = logging.getLogger("artcrm")
+
     # Verify contact exists
     contact = crm.get_contact(contact_id)
     if not contact:
+        logger.warning(f"contacts_log | contact_id={contact_id} not found")
         click.echo(f"Contact ID {contact_id} not found.", err=True)
         return
 
@@ -223,8 +240,10 @@ def contacts_log(contact_id):
 @click.option('--email', help='Update email')
 @click.option('--website', help='Update website')
 @click.option('--notes', help='Update notes')
+@log_call
 def contacts_edit(contact_id, status, email, website, notes):
     """Edit a contact (use options to set fields)"""
+    logger = logging.getLogger("artcrm")
     updates = {}
     if status:
         updates['status'] = status
@@ -243,6 +262,7 @@ def contacts_edit(contact_id, status, email, website, notes):
     if success:
         click.echo(f"✓ Updated contact #{contact_id}")
     else:
+        logger.warning(f"contacts_edit | contact_id={contact_id} not found")
         click.echo(f"Contact #{contact_id} not found", err=True)
 
 
@@ -259,6 +279,7 @@ def shows():
 @shows.command('list')
 @click.option('--status', help='Filter by status (possible/confirmed/completed)')
 @click.option('--upcoming', is_flag=True, help='Show only upcoming shows')
+@log_call
 def shows_list(status, upcoming):
     """List all shows"""
     date_from = date.today() if upcoming else None
@@ -281,6 +302,7 @@ def shows_list(status, upcoming):
 
 
 @shows.command('add')
+@log_call
 def shows_add():
     """Add a new show (interactive)"""
     click.echo("\n=== ADD NEW SHOW ===\n")
@@ -312,6 +334,7 @@ def shows_add():
 # =============================================================================
 
 @cli.command('overdue')
+@log_call
 def overdue():
     """Show contacts with overdue follow-ups"""
     results = crm.get_overdue_contacts()
@@ -329,6 +352,7 @@ def overdue():
 
 
 @cli.command('dormant')
+@log_call
 def dormant():
     """Show contacts with no activity in 12+ months"""
     results = crm.get_dormant_contacts()
@@ -353,6 +377,7 @@ def dormant():
 # =============================================================================
 
 @cli.command('brief')
+@log_call
 def brief():
     """AI daily brief - who to contact this week"""
     try:
@@ -370,6 +395,7 @@ def brief():
 
 @cli.command('score')
 @click.argument('contact_id', type=int)
+@log_call
 def score(contact_id):
     """AI fit score for a contact"""
     try:
@@ -389,6 +415,7 @@ def score(contact_id):
 
 @cli.command('suggest')
 @click.option('--limit', default=5, help='Number of suggestions')
+@log_call
 def suggest(limit):
     """AI suggests next contacts to reach out to"""
     try:
@@ -411,6 +438,7 @@ def suggest(limit):
 @click.argument('contact_id', type=int)
 @click.option('--language', help='Override contact language (de/en/fr)')
 @click.option('--no-portfolio', is_flag=True, help='Exclude portfolio link')
+@log_call
 def draft(contact_id, language, no_portfolio):
     """Draft a first contact letter using Claude API"""
     try:
@@ -447,6 +475,7 @@ def draft(contact_id, language, no_portfolio):
 @cli.command('followup')
 @click.argument('contact_id', type=int)
 @click.option('--language', help='Override contact language (de/en/fr)')
+@log_call
 def followup(contact_id, language):
     """Draft a follow-up letter using Claude API"""
     try:
@@ -500,6 +529,7 @@ def followup(contact_id, language):
 @click.option('--model', type=click.Choice(['claude', 'ollama']), default='ollama', help='AI model for enrichment')
 @click.option('--no-google', is_flag=True, help='Skip Google Maps API')
 @click.option('--no-osm', is_flag=True, help='Skip OpenStreetMap')
+@log_call
 def recon(city, country, types, radius, model, no_google, no_osm):
     """Scout a city for potential leads (galleries, cafes, coworking spaces)"""
     try:
