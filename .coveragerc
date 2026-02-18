@@ -1,0 +1,5 @@
+[run]
+omit =
+    scripts/inspect_xlsx.py
+    scripts/inspect_xlsx_raw.py
+    scripts/test_crm.py
