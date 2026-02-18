@@ -389,6 +389,7 @@ def brief():
         click.echo()
 
     except Exception as e:
+        logging.getLogger("artcrm").error(f"brief command failed: {e}", exc_info=True)
         click.echo(f"Error: {e}", err=True)
         click.echo("Make sure Ollama is running: ollama serve", err=True)
 
@@ -410,6 +411,7 @@ def score(contact_id):
         click.echo()
 
     except Exception as e:
+        logging.getLogger("artcrm").error(f"score command failed for contact {contact_id}: {e}", exc_info=True)
         click.echo(f"Error: {e}", err=True)
 
 
@@ -431,6 +433,7 @@ def suggest(limit):
             click.echo()
 
     except Exception as e:
+        logging.getLogger("artcrm").error(f"suggest command failed: {e}", exc_info=True)
         click.echo(f"Error: {e}", err=True)
 
 
@@ -464,11 +467,14 @@ def draft(contact_id, language, no_portfolio):
         click.echo()
 
     except ValueError as e:
+        logging.getLogger("artcrm").warning(f"draft failed for contact {contact_id}: {e}")
         click.echo(f"Error: {e}", err=True)
     except RuntimeError as e:
+        logging.getLogger("artcrm").error(f"draft API error for contact {contact_id}: {e}", exc_info=True)
         click.echo(f"API Error: {e}", err=True)
         click.echo("Make sure ANTHROPIC_API_KEY is set in .env", err=True)
     except Exception as e:
+        logging.getLogger("artcrm").error(f"draft unexpected error for contact {contact_id}: {e}", exc_info=True)
         click.echo(f"Unexpected error: {e}", err=True)
 
 
@@ -509,11 +515,14 @@ def followup(contact_id, language):
         click.echo()
 
     except ValueError as e:
+        logging.getLogger("artcrm").warning(f"followup failed for contact {contact_id}: {e}")
         click.echo(f"Error: {e}", err=True)
     except RuntimeError as e:
+        logging.getLogger("artcrm").error(f"followup API error for contact {contact_id}: {e}", exc_info=True)
         click.echo(f"API Error: {e}", err=True)
         click.echo("Make sure ANTHROPIC_API_KEY is set in .env", err=True)
     except Exception as e:
+        logging.getLogger("artcrm").error(f"followup unexpected error for contact {contact_id}: {e}", exc_info=True)
         click.echo(f"Unexpected error: {e}", err=True)
 
 
@@ -599,9 +608,11 @@ def recon(city, country, types, radius, model, no_google, no_osm):
         click.echo()
 
     except ImportError as e:
+        logging.getLogger("artcrm").error(f"recon failed: missing dependency: {e}")
         click.echo(f"Error: Missing dependencies. Run: pip install -r requirements.txt", err=True)
         click.echo(f"Details: {e}", err=True)
     except Exception as e:
+        logging.getLogger("artcrm").error(f"recon failed for {city}, {country}: {e}", exc_info=True)
         click.echo(f"Error: {e}", err=True)
 
 

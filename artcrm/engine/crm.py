@@ -76,6 +76,7 @@ def get_contact(contact_id: int) -> Optional[Contact]:
         row = cur.fetchone()
         if row:
             return Contact(**row)
+        logger.debug(f"get_contact: contact_id={contact_id} not found")
         return None
 
 
@@ -182,7 +183,9 @@ def search_contacts(
             LIMIT %(limit)s
         """, params)
 
-        return [Contact(**row) for row in cur.fetchall()]
+        rows = cur.fetchall()
+        logger.debug(f"search_contacts: {len(rows)} results (type={type}, status={status}, city={city})")
+        return [Contact(**row) for row in rows]
 
 
 def get_overdue_contacts() -> List[Contact]:
@@ -203,7 +206,9 @@ def get_overdue_contacts() -> List[Contact]:
             ORDER BY earliest_action ASC
         """)
 
-        return [Contact(**{k: v for k, v in row.items() if k != 'earliest_action'}) for row in cur.fetchall()]
+        rows = cur.fetchall()
+        logger.debug(f"get_overdue_contacts: {len(rows)} contacts with overdue actions")
+        return [Contact(**{k: v for k, v in row.items() if k != 'earliest_action'}) for row in rows]
 
 
 def get_dormant_contacts() -> List[Contact]:
@@ -224,7 +229,9 @@ def get_dormant_contacts() -> List[Contact]:
             ORDER BY MAX(i.interaction_date) ASC NULLS FIRST
         """, (threshold_date,))
 
-        return [Contact(**row) for row in cur.fetchall()]
+        rows = cur.fetchall()
+        logger.debug(f"get_dormant_contacts: {len(rows)} dormant contacts")
+        return [Contact(**row) for row in rows]
 
 
 # =============================================================================
@@ -270,7 +277,9 @@ def get_interactions(contact_id: int) -> List[Interaction]:
             ORDER BY interaction_date DESC
         """, (contact_id,))
 
-        return [Interaction(**row) for row in cur.fetchall()]
+        rows = cur.fetchall()
+        logger.debug(f"get_interactions: contact_id={contact_id} → {len(rows)} interactions")
+        return [Interaction(**row) for row in rows]
 
 
 # =============================================================================
@@ -334,7 +343,9 @@ def get_shows(
             ORDER BY date_start ASC NULLS LAST
         """, params)
 
-        return [Show(**row) for row in cur.fetchall()]
+        rows = cur.fetchall()
+        logger.debug(f"get_shows: {len(rows)} shows (status={status}, date_from={date_from})")
+        return [Show(**row) for row in rows]
 
 
 def update_show(show_id: int, updates: Dict[str, Any]) -> bool:

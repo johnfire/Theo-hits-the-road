@@ -233,8 +233,8 @@ APPROACH: [suggested approach]"""
                 _m = _re.search(r'-?\d+', line.split(':', 1)[1])
                 fit_score = int(_m.group()) if _m else fit_score
                 fit_score = max(0, min(100, fit_score))  # Clamp to 0-100
-            except:
-                pass
+            except Exception as e:
+                logger.warning(f"score_contact_fit: could not parse SCORE line {line!r}: {e}")
         elif line.startswith('REASONING:'):
             reasoning = line.split(':', 1)[1].strip()
         elif line.startswith('APPROACH:'):

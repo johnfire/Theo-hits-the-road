@@ -166,16 +166,17 @@ def test_custom_lead_scout_batch_size():
 # Ollama plaintext HTTP warning
 # ---------------------------------------------------------------------------
 
-def test_non_local_http_ollama_triggers_warning():
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter('always')
+def test_non_local_http_ollama_triggers_warning(caplog):
+    import logging
+    with caplog.at_level(logging.WARNING, logger='artcrm.config'):
         _reload_config({
             'DATABASE_URL': 'postgresql://u:p@localhost/db',
             'OLLAMA_BASE_URL': 'http://remote-pi.example.com:11434',
         })
-    messages = [str(w.message) for w in caught]
-    assert any('HTTPS' in m or 'plain' in m.lower() or 'sensitive' in m.lower()
-               for m in messages), f"Expected Ollama warning, got: {messages}"
+    assert any(
+        'HTTPS' in r.message or 'sensitive' in r.message.lower()
+        for r in caplog.records
+    )
 
 
 def test_localhost_ollama_no_warning():

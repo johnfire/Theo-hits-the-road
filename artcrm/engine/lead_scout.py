@@ -311,8 +311,8 @@ REASONING: [1-2 sentences]"""
                 try:
                     fit_score = int(''.join(filter(str.isdigit, line.split(':')[1])))
                     candidate.confidence_score = max(0, min(100, fit_score))
-                except:
-                    pass
+                except Exception as e:
+                    logger.warning(f"enrich_with_ai: could not parse FIT_SCORE line {line!r}: {e}")
 
         logger.debug(f"Enriched {candidate.name}: subtype={candidate.subtype}, confidence={candidate.confidence_score}")
 

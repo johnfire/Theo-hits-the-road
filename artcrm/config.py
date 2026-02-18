@@ -3,10 +3,13 @@ Art CRM Configuration
 Loads settings from environment variables with sensible defaults.
 """
 
+import logging
 import os
 import warnings
 from pathlib import Path
 from dotenv import load_dotenv
+
+_logger = logging.getLogger(__name__)
 
 # Load .env file
 env_path = Path(__file__).parent.parent / '.env'
@@ -19,6 +22,7 @@ class Config:
     # Database — must be set in .env; never hardcode credentials here
     DATABASE_URL = os.getenv('DATABASE_URL')
     if not DATABASE_URL:
+        _logger.critical("DATABASE_URL is not set — cannot start. Copy .env.example to .env and configure it.")
         raise ValueError("DATABASE_URL environment variable is not set. Copy .env.example to .env and configure it.")
 
     # Timezone
@@ -56,8 +60,7 @@ config = Config()
 # Prompts contain sensitive contact/business data; HTTPS should be used for remote hosts.
 _ollama_url = config.OLLAMA_BASE_URL
 if _ollama_url.startswith("http://") and "localhost" not in _ollama_url and "127.0.0.1" not in _ollama_url:
-    warnings.warn(
-        f"OLLAMA_BASE_URL is set to a non-local address over plain HTTP ({_ollama_url}). "
-        "AI prompts contain sensitive data — use HTTPS for remote Ollama hosts.",
-        stacklevel=2,
+    _logger.warning(
+        f"OLLAMA_BASE_URL is a non-local address over plain HTTP ({_ollama_url}). "
+        "AI prompts contain sensitive data — use HTTPS for remote Ollama hosts."
     )
