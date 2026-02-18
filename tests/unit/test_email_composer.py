@@ -13,6 +13,7 @@ import pytest
 from datetime import date
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+from urllib.parse import urlparse
 
 from artcrm.models import Contact, Interaction
 from artcrm.engine.email_composer import (
@@ -302,9 +303,9 @@ def test_draft_first_contact_portfolio_link_in_prompt_when_requested(tmp_path):
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         draft_first_contact_letter(1, include_portfolio_link=True)
     prompt = mock_claude.call_args[0][0]
-    # Use token-based check to satisfy CWE-020: exact URL token, not substring,
-    # so embedded occurrences like evil.com?q=https://www.artbychristopherrehm.com don't pass.
-    assert 'https://www.artbychristopherrehm.com' in prompt.split()
+    # CWE-020: parse URL components rather than doing string membership/substring checks.
+    parsed = [urlparse(w) for w in prompt.split()]
+    assert any(p.scheme == 'https' and p.netloc == 'www.artbychristopherrehm.com' for p in parsed)
 
 
 def test_draft_first_contact_no_portfolio_link_when_false(tmp_path):
@@ -314,7 +315,8 @@ def test_draft_first_contact_no_portfolio_link_when_false(tmp_path):
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         draft_first_contact_letter(1, include_portfolio_link=False)
     prompt = mock_claude.call_args[0][0]
-    assert 'https://www.artbychristopherrehm.com' not in prompt.split()
+    parsed = [urlparse(w) for w in prompt.split()]
+    assert not any(p.scheme == 'https' and p.netloc == 'www.artbychristopherrehm.com' for p in parsed)
 
 
 # ---------------------------------------------------------------------------
