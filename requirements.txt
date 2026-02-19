@@ -14,7 +14,7 @@ rapidfuzz==3.6.1        # Fuzzy string matching for venue names
 
 # Phase 2+:
 click==8.1.7          # CLI framework
-requests==2.32.4      # HTTP requests for Ollama and web APIs (< 2.32.4 had CVE-2024-35195 and .netrc leak)
+requests==2.32.4      # HTTP requests for DeepSeek and web APIs (< 2.32.4 had CVE-2024-35195 and .netrc leak)
 anthropic==0.39.0     # Claude API client
 
 # Phase 6-Alpha: Lead Generation

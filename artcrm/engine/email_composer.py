@@ -1,7 +1,7 @@
 """
-Email Composer - Claude API Integration
-High-quality letter and proposal drafting using Claude API.
+Email Composer - Letter and proposal drafting via AI.
 For first contact letters, follow-ups, and proposals.
+Defaults to Claude for high-quality writing; DeepSeek also supported.
 """
 
 import logging
@@ -10,9 +10,7 @@ from typing import Optional, Dict, Any
 from pathlib import Path
 
 from artcrm.logging_config import log_call
-
-from anthropic import Anthropic
-
+from artcrm.engine.ai_client import call_claude, call_ai  # noqa: F401 — call_claude re-exported for tests
 from artcrm.engine import crm
 from artcrm.models import Contact
 from artcrm.bus.events import bus, EVENT_DRAFT_READY
@@ -23,40 +21,6 @@ logger = logging.getLogger(__name__)
 # Draft storage
 DRAFTS_DIR = Path(__file__).parent.parent.parent / "data" / "drafts"
 DRAFTS_DIR.mkdir(exist_ok=True, parents=True)
-
-
-# =============================================================================
-# CLAUDE API CLIENT
-# =============================================================================
-
-@log_call
-def call_claude(prompt: str, system: Optional[str] = None, max_tokens: int = 2000) -> str:
-    """
-    Call Claude API for high-quality text generation.
-    Returns the generated text.
-    """
-    if not config.ANTHROPIC_API_KEY:
-        raise ValueError("ANTHROPIC_API_KEY not set in environment")
-
-    client = Anthropic(api_key=config.ANTHROPIC_API_KEY)
-
-    try:
-        logger.debug("Calling Claude API for draft generation")
-
-        message = client.messages.create(
-            model="claude-3-5-sonnet-20241022",  # Latest model
-            max_tokens=max_tokens,
-            system=system if system else "You are a professional writer helping an artist with gallery outreach.",
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
-
-        return message.content[0].text
-
-    except Exception as e:
-        logger.error(f"Claude API error: {e}")
-        raise RuntimeError(f"Failed to call Claude API: {e}")
 
 
 # =============================================================================
@@ -108,19 +72,22 @@ def build_contact_context(contact: Contact) -> str:
 def draft_first_contact_letter(
     contact_id: int,
     language: Optional[str] = None,
-    include_portfolio_link: bool = True
+    include_portfolio_link: bool = True,
+    model: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Draft a first contact letter to a gallery/venue using Claude API.
+    Draft a first contact letter to a gallery/venue.
 
     Args:
         contact_id: ID of contact to write to
         language: Override contact's preferred language
         include_portfolio_link: Include portfolio URL in draft
+        model: AI model ('claude', 'deepseek-chat', 'deepseek-reasoner'); defaults to 'claude'
 
     Returns: dict with subject, body, language, metadata
     """
-    logger.info(f"Drafting first contact letter for contact #{contact_id}")
+    _model = model or 'claude'
+    logger.info(f"Drafting first contact letter for contact #{contact_id} using {_model}")
 
     contact = crm.get_contact(contact_id)
     if not contact:
@@ -134,7 +101,6 @@ def draft_first_contact_letter(
     artist_bio = build_artist_context()
     contact_context = build_contact_context(contact)
 
-    # Prompt for Claude
     prompt = f"""Write a professional first contact letter from an artist to a {contact.type or 'venue'}.
 
 ARTIST INFORMATION:
@@ -162,7 +128,7 @@ Write the email now. Start with a subject line on its own line, then the email b
     system_prompt = """You are an experienced professional writer specializing in artist-gallery correspondence. You write clear, engaging letters that respect the recipient's time while showcasing the artist's unique value. Your writing is authentic and personalized to each recipient."""
 
     # Generate draft
-    draft_text = call_claude(prompt, system=system_prompt, max_tokens=1500)
+    draft_text = call_ai(prompt, model=_model, system=system_prompt, max_tokens=1500)
 
     # Parse subject and body (simple parsing)
     lines = draft_text.split('\n', 1)
@@ -177,6 +143,7 @@ Write the email now. Start with a subject line on its own line, then the email b
     draft_content = f"""TO: {contact.name}
 EMAIL: {contact.email or '(no email on file)'}
 LANGUAGE: {lang_name}
+MODEL: {_model}
 GENERATED: {datetime.now().isoformat()}
 
 SUBJECT: {subject}
@@ -209,7 +176,8 @@ SUBJECT: {subject}
 def draft_follow_up_letter(
     contact_id: int,
     previous_interaction_summary: str,
-    language: Optional[str] = None
+    language: Optional[str] = None,
+    model: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Draft a follow-up letter after previous contact.
@@ -218,10 +186,12 @@ def draft_follow_up_letter(
         contact_id: ID of contact
         previous_interaction_summary: Summary of last interaction
         language: Override language
+        model: AI model ('claude', 'deepseek-chat', 'deepseek-reasoner'); defaults to 'claude'
 
     Returns: draft dict
     """
-    logger.info(f"Drafting follow-up letter for contact #{contact_id}")
+    _model = model or 'claude'
+    logger.info(f"Drafting follow-up letter for contact #{contact_id} using {_model}")
 
     contact = crm.get_contact(contact_id)
     if not contact:
@@ -264,7 +234,7 @@ REQUIREMENTS:
 
 Write the email with subject line first, then body."""
 
-    draft_text = call_claude(prompt, max_tokens=1200)
+    draft_text = call_ai(prompt, model=_model, max_tokens=1200)
 
     lines = draft_text.split('\n', 1)
     subject = lines[0].replace('Subject:', '').strip()
@@ -279,6 +249,7 @@ Write the email with subject line first, then body."""
 TYPE: Follow-up
 EMAIL: {contact.email or '(no email)'}
 LANGUAGE: {lang_name}
+MODEL: {_model}
 GENERATED: {datetime.now().isoformat()}
 
 SUBJECT: {subject}

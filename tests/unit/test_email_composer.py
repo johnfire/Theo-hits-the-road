@@ -2,10 +2,10 @@
 Unit tests for the Email Composer (artcrm/engine/email_composer.py).
 
 Mocking strategy:
-- artcrm.engine.email_composer.Anthropic  → Claude API client
+- artcrm.engine.ai_client.Anthropic       → Claude API client (for call_claude tests)
+- artcrm.engine.email_composer.call_ai    → AI call in draft functions
 - artcrm.engine.email_composer.crm.*      → DB-touching crm calls
-- artcrm.engine.email_composer.call_claude → when testing draft functions
-- artcrm.engine.email_composer.DRAFTS_DIR  → tmp_path (avoids disk writes)
+- artcrm.engine.email_composer.DRAFTS_DIR → tmp_path (avoids disk writes)
 - artcrm.engine.email_composer.bus.emit   → event capture
 """
 
@@ -16,8 +16,8 @@ from unittest.mock import MagicMock, patch
 from urllib.parse import urlparse
 
 from artcrm.models import Contact, Interaction
+from artcrm.engine.ai_client import call_claude
 from artcrm.engine.email_composer import (
-    call_claude,
     build_artist_context,
     build_contact_context,
     draft_first_contact_letter,
@@ -55,27 +55,27 @@ def mock_anthropic_client(text: str):
 
 
 # ---------------------------------------------------------------------------
-# call_claude
+# call_claude (now lives in ai_client — patch paths updated accordingly)
 # ---------------------------------------------------------------------------
 
 def test_call_claude_raises_when_no_api_key(monkeypatch):
-    monkeypatch.setattr('artcrm.engine.email_composer.config.ANTHROPIC_API_KEY', '')
+    monkeypatch.setattr('artcrm.engine.ai_client.config.ANTHROPIC_API_KEY', '')
     with pytest.raises(ValueError, match='ANTHROPIC_API_KEY'):
         call_claude('prompt')
 
 
 def test_call_claude_returns_message_text():
     mock_cls, _ = mock_anthropic_client('Hello from Claude')
-    with patch('artcrm.engine.email_composer.config.ANTHROPIC_API_KEY', 'sk-test'), \
-         patch('artcrm.engine.email_composer.Anthropic', mock_cls):
+    with patch('artcrm.engine.ai_client.config.ANTHROPIC_API_KEY', 'sk-test'), \
+         patch('artcrm.engine.ai_client.Anthropic', mock_cls):
         result = call_claude('Write a letter')
     assert result == 'Hello from Claude'
 
 
 def test_call_claude_passes_prompt_in_messages():
     mock_cls, mock_client = mock_anthropic_client('ok')
-    with patch('artcrm.engine.email_composer.config.ANTHROPIC_API_KEY', 'sk-test'), \
-         patch('artcrm.engine.email_composer.Anthropic', mock_cls):
+    with patch('artcrm.engine.ai_client.config.ANTHROPIC_API_KEY', 'sk-test'), \
+         patch('artcrm.engine.ai_client.Anthropic', mock_cls):
         call_claude('My prompt here')
     messages = mock_client.messages.create.call_args[1]['messages']
     assert messages[0]['content'] == 'My prompt here'
@@ -83,8 +83,8 @@ def test_call_claude_passes_prompt_in_messages():
 
 def test_call_claude_uses_provided_system_prompt():
     mock_cls, mock_client = mock_anthropic_client('ok')
-    with patch('artcrm.engine.email_composer.config.ANTHROPIC_API_KEY', 'sk-test'), \
-         patch('artcrm.engine.email_composer.Anthropic', mock_cls):
+    with patch('artcrm.engine.ai_client.config.ANTHROPIC_API_KEY', 'sk-test'), \
+         patch('artcrm.engine.ai_client.Anthropic', mock_cls):
         call_claude('prompt', system='You are a poet')
     system = mock_client.messages.create.call_args[1]['system']
     assert system == 'You are a poet'
@@ -92,8 +92,8 @@ def test_call_claude_uses_provided_system_prompt():
 
 def test_call_claude_uses_default_system_when_none():
     mock_cls, mock_client = mock_anthropic_client('ok')
-    with patch('artcrm.engine.email_composer.config.ANTHROPIC_API_KEY', 'sk-test'), \
-         patch('artcrm.engine.email_composer.Anthropic', mock_cls):
+    with patch('artcrm.engine.ai_client.config.ANTHROPIC_API_KEY', 'sk-test'), \
+         patch('artcrm.engine.ai_client.Anthropic', mock_cls):
         call_claude('prompt')
     system = mock_client.messages.create.call_args[1]['system']
     assert 'artist' in system.lower() or 'writer' in system.lower()
@@ -101,8 +101,8 @@ def test_call_claude_uses_default_system_when_none():
 
 def test_call_claude_respects_max_tokens():
     mock_cls, mock_client = mock_anthropic_client('ok')
-    with patch('artcrm.engine.email_composer.config.ANTHROPIC_API_KEY', 'sk-test'), \
-         patch('artcrm.engine.email_composer.Anthropic', mock_cls):
+    with patch('artcrm.engine.ai_client.config.ANTHROPIC_API_KEY', 'sk-test'), \
+         patch('artcrm.engine.ai_client.Anthropic', mock_cls):
         call_claude('prompt', max_tokens=500)
     max_tokens = mock_client.messages.create.call_args[1]['max_tokens']
     assert max_tokens == 500
@@ -113,16 +113,16 @@ def test_call_claude_raises_runtime_error_on_exception():
     mock_client = MagicMock()
     mock_client.messages.create.side_effect = Exception('API down')
     mock_cls = MagicMock(return_value=mock_client)
-    with patch('artcrm.engine.email_composer.config.ANTHROPIC_API_KEY', 'sk-test'), \
-         patch('artcrm.engine.email_composer.Anthropic', mock_cls):
+    with patch('artcrm.engine.ai_client.config.ANTHROPIC_API_KEY', 'sk-test'), \
+         patch('artcrm.engine.ai_client.Anthropic', mock_cls):
         with pytest.raises(RuntimeError, match='Failed to call Claude API'):
             call_claude('prompt')
 
 
 def test_call_claude_initialises_client_with_api_key():
     mock_cls, _ = mock_anthropic_client('ok')
-    with patch('artcrm.engine.email_composer.config.ANTHROPIC_API_KEY', 'sk-ant-test'), \
-         patch('artcrm.engine.email_composer.Anthropic', mock_cls):
+    with patch('artcrm.engine.ai_client.config.ANTHROPIC_API_KEY', 'sk-ant-test'), \
+         patch('artcrm.engine.ai_client.Anthropic', mock_cls):
         call_claude('prompt')
     mock_cls.assert_called_once_with(api_key='sk-ant-test')
 
@@ -233,7 +233,7 @@ def test_draft_first_contact_raises_when_not_found(tmp_path):
 
 def test_draft_first_contact_returns_expected_keys(tmp_path):
     with patch('artcrm.engine.email_composer.crm.get_contact', return_value=SAMPLE_CONTACT), \
-         patch('artcrm.engine.email_composer.call_claude', return_value=DRAFT_RESPONSE), \
+         patch('artcrm.engine.email_composer.call_ai', return_value=DRAFT_RESPONSE), \
          patch('artcrm.engine.email_composer.bus.emit'), \
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         result = draft_first_contact_letter(1)
@@ -243,7 +243,7 @@ def test_draft_first_contact_returns_expected_keys(tmp_path):
 
 def test_draft_first_contact_uses_contact_language(tmp_path):
     with patch('artcrm.engine.email_composer.crm.get_contact', return_value=SAMPLE_CONTACT), \
-         patch('artcrm.engine.email_composer.call_claude', return_value=DRAFT_RESPONSE), \
+         patch('artcrm.engine.email_composer.call_ai', return_value=DRAFT_RESPONSE), \
          patch('artcrm.engine.email_composer.bus.emit'), \
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         result = draft_first_contact_letter(1)
@@ -252,7 +252,7 @@ def test_draft_first_contact_uses_contact_language(tmp_path):
 
 def test_draft_first_contact_language_override(tmp_path):
     with patch('artcrm.engine.email_composer.crm.get_contact', return_value=SAMPLE_CONTACT), \
-         patch('artcrm.engine.email_composer.call_claude', return_value=DRAFT_RESPONSE), \
+         patch('artcrm.engine.email_composer.call_ai', return_value=DRAFT_RESPONSE), \
          patch('artcrm.engine.email_composer.bus.emit'), \
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         result = draft_first_contact_letter(1, language='en')
@@ -261,7 +261,7 @@ def test_draft_first_contact_language_override(tmp_path):
 
 def test_draft_first_contact_parses_subject_from_first_line(tmp_path):
     with patch('artcrm.engine.email_composer.crm.get_contact', return_value=SAMPLE_CONTACT), \
-         patch('artcrm.engine.email_composer.call_claude', return_value=DRAFT_RESPONSE), \
+         patch('artcrm.engine.email_composer.call_ai', return_value=DRAFT_RESPONSE), \
          patch('artcrm.engine.email_composer.bus.emit'), \
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         result = draft_first_contact_letter(1)
@@ -270,7 +270,7 @@ def test_draft_first_contact_parses_subject_from_first_line(tmp_path):
 
 def test_draft_first_contact_parses_body_from_remainder(tmp_path):
     with patch('artcrm.engine.email_composer.crm.get_contact', return_value=SAMPLE_CONTACT), \
-         patch('artcrm.engine.email_composer.call_claude', return_value=DRAFT_RESPONSE), \
+         patch('artcrm.engine.email_composer.call_ai', return_value=DRAFT_RESPONSE), \
          patch('artcrm.engine.email_composer.bus.emit'), \
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         result = draft_first_contact_letter(1)
@@ -279,7 +279,7 @@ def test_draft_first_contact_parses_body_from_remainder(tmp_path):
 
 def test_draft_first_contact_writes_file(tmp_path):
     with patch('artcrm.engine.email_composer.crm.get_contact', return_value=SAMPLE_CONTACT), \
-         patch('artcrm.engine.email_composer.call_claude', return_value=DRAFT_RESPONSE), \
+         patch('artcrm.engine.email_composer.call_ai', return_value=DRAFT_RESPONSE), \
          patch('artcrm.engine.email_composer.bus.emit'), \
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         result = draft_first_contact_letter(1)
@@ -288,7 +288,7 @@ def test_draft_first_contact_writes_file(tmp_path):
 
 def test_draft_first_contact_emits_event(tmp_path):
     with patch('artcrm.engine.email_composer.crm.get_contact', return_value=SAMPLE_CONTACT), \
-         patch('artcrm.engine.email_composer.call_claude', return_value=DRAFT_RESPONSE), \
+         patch('artcrm.engine.email_composer.call_ai', return_value=DRAFT_RESPONSE), \
          patch('artcrm.engine.email_composer.bus.emit') as mock_emit, \
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         draft_first_contact_letter(1)
@@ -298,11 +298,11 @@ def test_draft_first_contact_emits_event(tmp_path):
 
 def test_draft_first_contact_portfolio_link_in_prompt_when_requested(tmp_path):
     with patch('artcrm.engine.email_composer.crm.get_contact', return_value=SAMPLE_CONTACT), \
-         patch('artcrm.engine.email_composer.call_claude', return_value=DRAFT_RESPONSE) as mock_claude, \
+         patch('artcrm.engine.email_composer.call_ai', return_value=DRAFT_RESPONSE) as mock_ai, \
          patch('artcrm.engine.email_composer.bus.emit'), \
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         draft_first_contact_letter(1, include_portfolio_link=True)
-    prompt = mock_claude.call_args[0][0]
+    prompt = mock_ai.call_args[0][0]
     # CWE-020: parse URL components rather than doing string membership/substring checks.
     parsed = [urlparse(w) for w in prompt.split()]
     assert any(p.scheme == 'https' and p.netloc == 'www.artbychristopherrehm.com' for p in parsed)
@@ -310,13 +310,22 @@ def test_draft_first_contact_portfolio_link_in_prompt_when_requested(tmp_path):
 
 def test_draft_first_contact_no_portfolio_link_when_false(tmp_path):
     with patch('artcrm.engine.email_composer.crm.get_contact', return_value=SAMPLE_CONTACT), \
-         patch('artcrm.engine.email_composer.call_claude', return_value=DRAFT_RESPONSE) as mock_claude, \
+         patch('artcrm.engine.email_composer.call_ai', return_value=DRAFT_RESPONSE) as mock_ai, \
          patch('artcrm.engine.email_composer.bus.emit'), \
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         draft_first_contact_letter(1, include_portfolio_link=False)
-    prompt = mock_claude.call_args[0][0]
+    prompt = mock_ai.call_args[0][0]
     parsed = [urlparse(w) for w in prompt.split()]
     assert not any(p.scheme == 'https' and p.netloc == 'www.artbychristopherrehm.com' for p in parsed)
+
+
+def test_draft_first_contact_model_param_passed_to_call_ai(tmp_path):
+    with patch('artcrm.engine.email_composer.crm.get_contact', return_value=SAMPLE_CONTACT), \
+         patch('artcrm.engine.email_composer.call_ai', return_value=DRAFT_RESPONSE) as mock_ai, \
+         patch('artcrm.engine.email_composer.bus.emit'), \
+         patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
+        draft_first_contact_letter(1, model='deepseek-chat')
+    assert mock_ai.call_args[1].get('model') == 'deepseek-chat'
 
 
 # ---------------------------------------------------------------------------
@@ -333,7 +342,7 @@ def test_draft_follow_up_raises_when_not_found(tmp_path):
 def test_draft_follow_up_returns_expected_keys(tmp_path):
     with patch('artcrm.engine.email_composer.crm.get_contact', return_value=SAMPLE_CONTACT), \
          patch('artcrm.engine.email_composer.crm.get_interactions', return_value=[]), \
-         patch('artcrm.engine.email_composer.call_claude', return_value=DRAFT_RESPONSE), \
+         patch('artcrm.engine.email_composer.call_ai', return_value=DRAFT_RESPONSE), \
          patch('artcrm.engine.email_composer.bus.emit'), \
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         result = draft_follow_up_letter(1, 'Sent intro in January')
@@ -344,7 +353,7 @@ def test_draft_follow_up_returns_expected_keys(tmp_path):
 def test_draft_follow_up_uses_contact_language(tmp_path):
     with patch('artcrm.engine.email_composer.crm.get_contact', return_value=SAMPLE_CONTACT), \
          patch('artcrm.engine.email_composer.crm.get_interactions', return_value=[]), \
-         patch('artcrm.engine.email_composer.call_claude', return_value=DRAFT_RESPONSE), \
+         patch('artcrm.engine.email_composer.call_ai', return_value=DRAFT_RESPONSE), \
          patch('artcrm.engine.email_composer.bus.emit'), \
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         result = draft_follow_up_letter(1, 'Previous contact')
@@ -354,29 +363,29 @@ def test_draft_follow_up_uses_contact_language(tmp_path):
 def test_draft_follow_up_includes_interaction_history_in_prompt(tmp_path):
     with patch('artcrm.engine.email_composer.crm.get_contact', return_value=SAMPLE_CONTACT), \
          patch('artcrm.engine.email_composer.crm.get_interactions', return_value=[SAMPLE_INTERACTION]), \
-         patch('artcrm.engine.email_composer.call_claude', return_value=DRAFT_RESPONSE) as mock_claude, \
+         patch('artcrm.engine.email_composer.call_ai', return_value=DRAFT_RESPONSE) as mock_ai, \
          patch('artcrm.engine.email_composer.bus.emit'), \
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         draft_follow_up_letter(1, 'Initial contact in January')
-    prompt = mock_claude.call_args[0][0]
+    prompt = mock_ai.call_args[0][0]
     assert 'Sent intro letter' in prompt
 
 
 def test_draft_follow_up_no_history_message(tmp_path):
     with patch('artcrm.engine.email_composer.crm.get_contact', return_value=SAMPLE_CONTACT), \
          patch('artcrm.engine.email_composer.crm.get_interactions', return_value=[]), \
-         patch('artcrm.engine.email_composer.call_claude', return_value=DRAFT_RESPONSE) as mock_claude, \
+         patch('artcrm.engine.email_composer.call_ai', return_value=DRAFT_RESPONSE) as mock_ai, \
          patch('artcrm.engine.email_composer.bus.emit'), \
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         draft_follow_up_letter(1, 'Previous contact')
-    prompt = mock_claude.call_args[0][0]
+    prompt = mock_ai.call_args[0][0]
     assert 'No previous interactions' in prompt
 
 
 def test_draft_follow_up_writes_file(tmp_path):
     with patch('artcrm.engine.email_composer.crm.get_contact', return_value=SAMPLE_CONTACT), \
          patch('artcrm.engine.email_composer.crm.get_interactions', return_value=[]), \
-         patch('artcrm.engine.email_composer.call_claude', return_value=DRAFT_RESPONSE), \
+         patch('artcrm.engine.email_composer.call_ai', return_value=DRAFT_RESPONSE), \
          patch('artcrm.engine.email_composer.bus.emit'), \
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         result = draft_follow_up_letter(1, 'Previous contact')
@@ -386,7 +395,7 @@ def test_draft_follow_up_writes_file(tmp_path):
 def test_draft_follow_up_emits_event(tmp_path):
     with patch('artcrm.engine.email_composer.crm.get_contact', return_value=SAMPLE_CONTACT), \
          patch('artcrm.engine.email_composer.crm.get_interactions', return_value=[]), \
-         patch('artcrm.engine.email_composer.call_claude', return_value=DRAFT_RESPONSE), \
+         patch('artcrm.engine.email_composer.call_ai', return_value=DRAFT_RESPONSE), \
          patch('artcrm.engine.email_composer.bus.emit') as mock_emit, \
          patch('artcrm.engine.email_composer.DRAFTS_DIR', tmp_path):
         draft_follow_up_letter(1, 'Previous contact')

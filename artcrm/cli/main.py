@@ -16,6 +16,8 @@ from artcrm.logging_config import configure_logging, log_call
 
 _EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
 
+AI_MODEL_CHOICES = ['claude', 'deepseek-chat', 'deepseek-reasoner']
+
 
 @log_call
 def _prompt_date(label: str, default: Optional[date] = None) -> Optional[date]:
@@ -377,33 +379,36 @@ def dormant():
 # =============================================================================
 
 @cli.command('brief')
+@click.option('--model', type=click.Choice(AI_MODEL_CHOICES), default='deepseek-chat',
+              show_default=True, help='AI model to use')
 @log_call
-def brief():
+def brief(model):
     """AI daily brief - who to contact this week"""
     try:
         from artcrm.engine import ai_planner
 
-        click.echo("\n🤖 Generating AI daily brief...\n")
-        result = ai_planner.generate_daily_brief()
+        click.echo(f"\nGenerating AI daily brief [{model}]...\n")
+        result = ai_planner.generate_daily_brief(model=model)
         click.echo(result)
         click.echo()
 
     except Exception as e:
         logging.getLogger("artcrm").error(f"brief command failed: {e}", exc_info=True)
         click.echo(f"Error: {e}", err=True)
-        click.echo("Make sure Ollama is running: ollama serve", err=True)
 
 
 @cli.command('score')
 @click.argument('contact_id', type=int)
+@click.option('--model', type=click.Choice(AI_MODEL_CHOICES), default='deepseek-chat',
+              show_default=True, help='AI model to use')
 @log_call
-def score(contact_id):
+def score(contact_id, model):
     """AI fit score for a contact"""
     try:
         from artcrm.engine import ai_planner
 
-        click.echo(f"\n🤖 Analyzing contact #{contact_id}...\n")
-        result = ai_planner.score_contact_fit(contact_id)
+        click.echo(f"\nAnalyzing contact #{contact_id} [{model}]...\n")
+        result = ai_planner.score_contact_fit(contact_id, model=model)
 
         click.echo(f"Fit Score: {result['fit_score']}/100")
         click.echo(f"\nReasoning:\n{result['reasoning']}")
@@ -417,14 +422,16 @@ def score(contact_id):
 
 @cli.command('suggest')
 @click.option('--limit', default=5, help='Number of suggestions')
+@click.option('--model', type=click.Choice(AI_MODEL_CHOICES), default='deepseek-chat',
+              show_default=True, help='AI model to use')
 @log_call
-def suggest(limit):
+def suggest(limit, model):
     """AI suggests next contacts to reach out to"""
     try:
         from artcrm.engine import ai_planner
 
-        click.echo(f"\n🤖 Getting AI suggestions for next {limit} contacts...\n")
-        results = ai_planner.suggest_next_contacts(limit=limit)
+        click.echo(f"\nGetting AI suggestions for next {limit} contacts [{model}]...\n")
+        results = ai_planner.suggest_next_contacts(limit=limit, model=model)
 
         for r in results:
             contact = r['contact']
@@ -441,19 +448,21 @@ def suggest(limit):
 @click.argument('contact_id', type=int)
 @click.option('--language', help='Override contact language (de/en/fr)')
 @click.option('--no-portfolio', is_flag=True, help='Exclude portfolio link')
+@click.option('--model', type=click.Choice(AI_MODEL_CHOICES), default='claude',
+              show_default=True, help='AI model to use')
 @log_call
-def draft(contact_id, language, no_portfolio):
-    """Draft a first contact letter using Claude API"""
+def draft(contact_id, language, no_portfolio, model):
+    """Draft a first contact letter via AI"""
     try:
         from artcrm.engine import email_composer
 
-        click.echo(f"\n✍️  Drafting first contact letter for contact #{contact_id}...\n")
-        click.echo("(This uses Claude API and may take a few seconds)\n")
+        click.echo(f"\nDrafting first contact letter for contact #{contact_id} [{model}]...\n")
 
         result = email_composer.draft_first_contact_letter(
             contact_id=contact_id,
             language=language,
-            include_portfolio_link=not no_portfolio
+            include_portfolio_link=not no_portfolio,
+            model=model,
         )
 
         click.echo(f"{'='*80}")
@@ -472,7 +481,7 @@ def draft(contact_id, language, no_portfolio):
     except RuntimeError as e:
         logging.getLogger("artcrm").error(f"draft API error for contact {contact_id}: {e}", exc_info=True)
         click.echo(f"API Error: {e}", err=True)
-        click.echo("Make sure ANTHROPIC_API_KEY is set in .env", err=True)
+        click.echo("Make sure ANTHROPIC_API_KEY / DEEPSEEK_API_KEY is set in .env", err=True)
     except Exception as e:
         logging.getLogger("artcrm").error(f"draft unexpected error for contact {contact_id}: {e}", exc_info=True)
         click.echo(f"Unexpected error: {e}", err=True)
@@ -481,26 +490,27 @@ def draft(contact_id, language, no_portfolio):
 @cli.command('followup')
 @click.argument('contact_id', type=int)
 @click.option('--language', help='Override contact language (de/en/fr)')
+@click.option('--model', type=click.Choice(AI_MODEL_CHOICES), default='claude',
+              show_default=True, help='AI model to use')
 @log_call
-def followup(contact_id, language):
-    """Draft a follow-up letter using Claude API"""
+def followup(contact_id, language, model):
+    """Draft a follow-up letter via AI"""
     try:
         from artcrm.engine import email_composer
 
         # Prompt user for context about last interaction
-        click.echo(f"\n✍️  Drafting follow-up letter for contact #{contact_id}...\n")
+        click.echo(f"\nDrafting follow-up letter for contact #{contact_id} [{model}]...\n")
 
         previous_summary = click.prompt(
             "Brief summary of last interaction (what happened, what was discussed)",
             type=str
         )
 
-        click.echo("\n(This uses Claude API and may take a few seconds)\n")
-
         result = email_composer.draft_follow_up_letter(
             contact_id=contact_id,
             previous_interaction_summary=previous_summary,
-            language=language
+            language=language,
+            model=model,
         )
 
         click.echo(f"{'='*80}")
@@ -520,7 +530,7 @@ def followup(contact_id, language):
     except RuntimeError as e:
         logging.getLogger("artcrm").error(f"followup API error for contact {contact_id}: {e}", exc_info=True)
         click.echo(f"API Error: {e}", err=True)
-        click.echo("Make sure ANTHROPIC_API_KEY is set in .env", err=True)
+        click.echo("Make sure ANTHROPIC_API_KEY / DEEPSEEK_API_KEY is set in .env", err=True)
     except Exception as e:
         logging.getLogger("artcrm").error(f"followup unexpected error for contact {contact_id}: {e}", exc_info=True)
         click.echo(f"Unexpected error: {e}", err=True)
@@ -535,7 +545,8 @@ def followup(contact_id, language):
 @click.argument('country', default='DE')
 @click.option('--type', 'types', multiple=True, help='Business types to search (gallery, cafe, coworking)')
 @click.option('--radius', default=10.0, help='Search radius in km (default: 10)')
-@click.option('--model', type=click.Choice(['claude', 'ollama']), default='ollama', help='AI model for enrichment')
+@click.option('--model', type=click.Choice(AI_MODEL_CHOICES), default='deepseek-chat',
+              show_default=True, help='AI model for enrichment')
 @click.option('--no-google', is_flag=True, help='Skip Google Maps API')
 @click.option('--no-osm', is_flag=True, help='Skip OpenStreetMap')
 @log_call

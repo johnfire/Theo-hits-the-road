@@ -26,8 +26,8 @@ except ImportError:
     GOOGLE_MAPS_AVAILABLE = False
     logger.warning("googlemaps library not installed. Google Maps API will not be available.")
 
-from artcrm.engine import crm, ai_planner
-from artcrm.engine.email_composer import call_claude
+from artcrm.engine import crm
+from artcrm.engine.ai_client import call_ai
 from artcrm.models import Contact
 from artcrm.bus.events import bus, EVENT_CONTACT_CREATED
 from artcrm.config import config
@@ -255,7 +255,7 @@ def search_openstreetmap(
 
 def enrich_with_ai(
     candidate: LeadCandidate,
-    model: Literal['claude', 'ollama'] = 'ollama'
+    model: Literal['claude', 'deepseek-chat', 'deepseek-reasoner'] = 'deepseek-chat'
 ) -> LeadCandidate:
     """
     Use AI to infer missing data and categorize venue.
@@ -296,11 +296,7 @@ CONFIDENCE: [0-100]
 REASONING: [1-2 sentences]"""
 
     try:
-        if model == 'claude':
-            response = call_claude(prompt, max_tokens=500)
-        else:
-            from artcrm.engine.ai_planner import call_ollama
-            response = call_ollama(prompt)
+        response = call_ai(prompt, model=model, max_tokens=500)
 
         # Parse response
         lines = response.split('\n')
@@ -413,7 +409,7 @@ def scout_city(
     country: str = 'DE',
     business_types: Optional[List[str]] = None,
     radius_km: float = 10.0,
-    ai_model: Literal['claude', 'ollama'] = 'ollama',
+    ai_model: Literal['claude', 'deepseek-chat', 'deepseek-reasoner'] = 'deepseek-chat',
     use_google_maps: bool = True,
     use_osm: bool = True,
     skip_duplicates: bool = True

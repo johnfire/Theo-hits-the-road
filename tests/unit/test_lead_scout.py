@@ -5,8 +5,7 @@ Mocking strategy:
 - artcrm.engine.lead_scout.GOOGLE_MAPS_AVAILABLE  → bool patch for import guard
 - artcrm.engine.lead_scout.googlemaps             → Google Maps client
 - requests.post                                   → Overpass HTTP
-- artcrm.engine.lead_scout.call_claude            → Claude API calls
-- artcrm.engine.lead_scout.ai_planner.call_ollama → Ollama calls
+- artcrm.engine.lead_scout.call_ai                → AI calls (all models)
 - artcrm.engine.lead_scout.crm.*                  → all DB-touching crm calls
 - artcrm.engine.lead_scout.SCOUT_DIR              → tmp_path
 - time.sleep                                      → no-op
@@ -264,39 +263,39 @@ def test_search_osm_unnamed_fallback():
 AI_ENRICH_RESPONSE = "SUBTYPE: contemporary\nFIT_SCORE: 80\nCONFIDENCE: 75\nREASONING: Good fit."
 
 
-def test_enrich_with_ai_ollama_sets_subtype():
+def test_enrich_with_ai_deepseek_sets_subtype():
     candidate = LeadCandidate(name='Gallery X', type='gallery', city='Augsburg')
-    with patch('artcrm.engine.lead_scout.ai_planner.call_ollama', return_value=AI_ENRICH_RESPONSE):
-        result = enrich_with_ai(candidate, model='ollama')
+    with patch('artcrm.engine.lead_scout.call_ai', return_value=AI_ENRICH_RESPONSE):
+        result = enrich_with_ai(candidate, model='deepseek-chat')
     assert result.subtype == 'contemporary'
 
 
-def test_enrich_with_ai_claude_calls_call_claude():
+def test_enrich_with_ai_claude_calls_call_ai():
     candidate = LeadCandidate(name='Gallery X', type='gallery', city='Augsburg')
-    with patch('artcrm.engine.lead_scout.call_claude', return_value=AI_ENRICH_RESPONSE) as mock_claude:
+    with patch('artcrm.engine.lead_scout.call_ai', return_value=AI_ENRICH_RESPONSE) as mock_ai:
         enrich_with_ai(candidate, model='claude')
-    mock_claude.assert_called_once()
+    mock_ai.assert_called_once()
 
 
 def test_enrich_with_ai_updates_confidence_score():
     candidate = LeadCandidate(name='Gallery X', type='gallery', city='Augsburg')
-    with patch('artcrm.engine.lead_scout.ai_planner.call_ollama', return_value=AI_ENRICH_RESPONSE):
-        result = enrich_with_ai(candidate, model='ollama')
+    with patch('artcrm.engine.lead_scout.call_ai', return_value=AI_ENRICH_RESPONSE):
+        result = enrich_with_ai(candidate, model='deepseek-chat')
     assert result.confidence_score == 80
 
 
 def test_enrich_with_ai_clamps_confidence_above_100():
     response = "SUBTYPE: upscale\nFIT_SCORE: 150\nREASONING: Perfect."
     candidate = LeadCandidate(name='Gallery X', type='gallery', city='Augsburg')
-    with patch('artcrm.engine.lead_scout.ai_planner.call_ollama', return_value=response):
-        result = enrich_with_ai(candidate, model='ollama')
+    with patch('artcrm.engine.lead_scout.call_ai', return_value=response):
+        result = enrich_with_ai(candidate, model='deepseek-chat')
     assert result.confidence_score == 100
 
 
 def test_enrich_with_ai_returns_candidate_unchanged_on_error():
     candidate = LeadCandidate(name='Gallery X', type='gallery', city='Augsburg', confidence_score=50)
-    with patch('artcrm.engine.lead_scout.ai_planner.call_ollama', side_effect=RuntimeError('down')):
-        result = enrich_with_ai(candidate, model='ollama')
+    with patch('artcrm.engine.lead_scout.call_ai', side_effect=RuntimeError('down')):
+        result = enrich_with_ai(candidate, model='deepseek-chat')
     assert result.confidence_score == 50
     assert result.subtype is None
 
@@ -304,17 +303,17 @@ def test_enrich_with_ai_returns_candidate_unchanged_on_error():
 def test_enrich_with_ai_skips_unknown_subtype():
     response = "SUBTYPE: unknown\nFIT_SCORE: 60\nREASONING: Unclear."
     candidate = LeadCandidate(name='Gallery X', type='gallery', city='Augsburg')
-    with patch('artcrm.engine.lead_scout.ai_planner.call_ollama', return_value=response):
-        result = enrich_with_ai(candidate, model='ollama')
+    with patch('artcrm.engine.lead_scout.call_ai', return_value=response):
+        result = enrich_with_ai(candidate, model='deepseek-chat')
     assert result.subtype is None
 
 
 def test_enrich_with_ai_includes_website_in_context():
     candidate = LeadCandidate(name='Gallery X', type='gallery', city='Augsburg',
                               website='https://gallery-x.de')
-    with patch('artcrm.engine.lead_scout.ai_planner.call_ollama', return_value=AI_ENRICH_RESPONSE) as mock_ollama:
-        enrich_with_ai(candidate, model='ollama')
-    prompt = mock_ollama.call_args[0][0]
+    with patch('artcrm.engine.lead_scout.call_ai', return_value=AI_ENRICH_RESPONSE) as mock_ai:
+        enrich_with_ai(candidate, model='deepseek-chat')
+    prompt = mock_ai.call_args[0][0]
     assert 'gallery-x.de' in prompt
 
 

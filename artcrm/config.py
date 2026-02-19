@@ -35,8 +35,11 @@ class Config:
     DORMANT_THRESHOLD_MONTHS = int(os.getenv('DORMANT_THRESHOLD_MONTHS', '12'))
 
     # AI Configuration (Phase 5+)
-    OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
-    OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3')
+    # DeepSeek (routine tasks: scoring, briefs, suggestions)
+    DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY', '')
+    DEEPSEEK_BASE_URL = os.getenv('DEEPSEEK_BASE_URL', 'https://api.deepseek.com')
+    DEFAULT_AI_MODEL = os.getenv('DEFAULT_AI_MODEL', 'deepseek-chat')
+    # Claude (high-stakes writing: gallery letters, proposals)
     ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY', '')
 
     # Lead Generation (Phase 6-Alpha)
@@ -55,12 +58,3 @@ class Config:
 
 # Singleton instance
 config = Config()
-
-# Warn if Ollama is reachable only over plain HTTP on a non-local network.
-# Prompts contain sensitive contact/business data; HTTPS should be used for remote hosts.
-_ollama_url = config.OLLAMA_BASE_URL
-if _ollama_url.startswith("http://") and "localhost" not in _ollama_url and "127.0.0.1" not in _ollama_url:
-    _logger.warning(
-        f"OLLAMA_BASE_URL is a non-local address over plain HTTP ({_ollama_url}). "
-        "AI prompts contain sensitive data — use HTTPS for remote Ollama hosts."
-    )

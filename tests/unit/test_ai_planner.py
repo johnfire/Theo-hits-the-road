@@ -2,10 +2,10 @@
 Unit tests for the AI Planner (artcrm/engine/ai_planner.py).
 
 Mocking strategy:
-- requests.post           → Ollama HTTP calls
-- artcrm.engine.ai_planner.crm.*  → all crm module calls
+- artcrm.engine.ai_planner.call_ai       → AI backend calls
+- artcrm.engine.ai_planner.crm.*         → all crm module calls
 - artcrm.engine.ai_planner.get_db_cursor → direct DB calls in score/suggest/batch
-- artcrm.engine.ai_planner.bus.emit → event emission
+- artcrm.engine.ai_planner.bus.emit      → event emission
 """
 
 import pytest
@@ -15,7 +15,6 @@ from unittest.mock import MagicMock, patch, call
 
 from artcrm.models import Contact, Interaction, Show
 from artcrm.engine.ai_planner import (
-    call_ollama,
     build_artist_context,
     build_context_for_contact,
     generate_daily_brief,
@@ -70,84 +69,6 @@ def cursor_patch(cur):
     def _mock_ctx():
         yield cur
     return patch('artcrm.engine.ai_planner.get_db_cursor', _mock_ctx)
-
-
-def mock_ollama_response(text: str):
-    """Build a mock requests.Response with the given text as the Ollama response."""
-    mock_resp = MagicMock()
-    mock_resp.json.return_value = {'response': text}
-    mock_resp.raise_for_status.return_value = None
-    return mock_resp
-
-
-# ---------------------------------------------------------------------------
-# call_ollama
-# ---------------------------------------------------------------------------
-
-def test_call_ollama_returns_response_text():
-    with patch('requests.post', return_value=mock_ollama_response('Hello artist')):
-        result = call_ollama('What should I do?')
-    assert result == 'Hello artist'
-
-
-def test_call_ollama_posts_to_correct_url():
-    with patch('requests.post', return_value=mock_ollama_response('ok')) as mock_post:
-        call_ollama('prompt')
-    url = mock_post.call_args[0][0]
-    assert '/api/generate' in url
-
-
-def test_call_ollama_includes_prompt_in_payload():
-    with patch('requests.post', return_value=mock_ollama_response('ok')) as mock_post:
-        call_ollama('My prompt text')
-    payload = mock_post.call_args[1]['json']
-    assert payload['prompt'] == 'My prompt text'
-
-
-def test_call_ollama_includes_system_when_provided():
-    with patch('requests.post', return_value=mock_ollama_response('ok')) as mock_post:
-        call_ollama('prompt', system='You are helpful')
-    payload = mock_post.call_args[1]['json']
-    assert payload['system'] == 'You are helpful'
-
-
-def test_call_ollama_no_system_key_when_not_provided():
-    with patch('requests.post', return_value=mock_ollama_response('ok')) as mock_post:
-        call_ollama('prompt')
-    payload = mock_post.call_args[1]['json']
-    assert 'system' not in payload
-
-
-def test_call_ollama_stream_is_false():
-    with patch('requests.post', return_value=mock_ollama_response('ok')) as mock_post:
-        call_ollama('prompt')
-    payload = mock_post.call_args[1]['json']
-    assert payload['stream'] is False
-
-
-def test_call_ollama_raises_runtime_error_on_request_exception():
-    import requests as req
-    with patch('requests.post', side_effect=req.exceptions.ConnectionError('refused')):
-        with pytest.raises(RuntimeError, match='Failed to call Ollama'):
-            call_ollama('prompt')
-
-
-def test_call_ollama_raises_on_http_error():
-    import requests as req
-    mock_resp = MagicMock()
-    mock_resp.raise_for_status.side_effect = req.exceptions.HTTPError('500')
-    with patch('requests.post', return_value=mock_resp):
-        with pytest.raises(RuntimeError, match='Failed to call Ollama'):
-            call_ollama('prompt')
-
-
-def test_call_ollama_empty_response_key_returns_empty_string():
-    mock_resp = MagicMock()
-    mock_resp.json.return_value = {}  # no 'response' key
-    mock_resp.raise_for_status.return_value = None
-    with patch('requests.post', return_value=mock_resp):
-        result = call_ollama('prompt')
-    assert result == ''
 
 
 # ---------------------------------------------------------------------------
@@ -229,31 +150,40 @@ def test_build_context_includes_notes_when_present():
 # generate_daily_brief
 # ---------------------------------------------------------------------------
 
-def test_generate_daily_brief_returns_ollama_response():
+def test_generate_daily_brief_returns_ai_response():
     with patch('artcrm.engine.ai_planner.crm.get_overdue_contacts', return_value=[]), \
          patch('artcrm.engine.ai_planner.crm.get_dormant_contacts', return_value=[]), \
          patch('artcrm.engine.ai_planner.crm.get_shows', return_value=[]), \
-         patch('artcrm.engine.ai_planner.call_ollama', return_value='Contact Galerie X first'):
+         patch('artcrm.engine.ai_planner.call_ai', return_value='Contact Galerie X first'):
         result = generate_daily_brief()
     assert result == 'Contact Galerie X first'
 
 
-def test_generate_daily_brief_calls_ollama():
+def test_generate_daily_brief_calls_ai():
     with patch('artcrm.engine.ai_planner.crm.get_overdue_contacts', return_value=[SAMPLE_CONTACT]), \
          patch('artcrm.engine.ai_planner.crm.get_dormant_contacts', return_value=[]), \
          patch('artcrm.engine.ai_planner.crm.get_shows', return_value=[]), \
-         patch('artcrm.engine.ai_planner.call_ollama', return_value='ok') as mock_ollama:
+         patch('artcrm.engine.ai_planner.call_ai', return_value='ok') as mock_ai:
         generate_daily_brief()
-    mock_ollama.assert_called_once()
+    mock_ai.assert_called_once()
+
+
+def test_generate_daily_brief_uses_specified_model():
+    with patch('artcrm.engine.ai_planner.crm.get_overdue_contacts', return_value=[]), \
+         patch('artcrm.engine.ai_planner.crm.get_dormant_contacts', return_value=[]), \
+         patch('artcrm.engine.ai_planner.crm.get_shows', return_value=[]), \
+         patch('artcrm.engine.ai_planner.call_ai', return_value='ok') as mock_ai:
+        generate_daily_brief(model='deepseek-reasoner')
+    assert mock_ai.call_args[1]['model'] == 'deepseek-reasoner'
 
 
 def test_generate_daily_brief_prompt_includes_contact_counts():
     with patch('artcrm.engine.ai_planner.crm.get_overdue_contacts', return_value=[SAMPLE_CONTACT, SAMPLE_CONTACT]), \
          patch('artcrm.engine.ai_planner.crm.get_dormant_contacts', return_value=[SAMPLE_CONTACT]), \
          patch('artcrm.engine.ai_planner.crm.get_shows', return_value=[]), \
-         patch('artcrm.engine.ai_planner.call_ollama', return_value='ok') as mock_ollama:
+         patch('artcrm.engine.ai_planner.call_ai', return_value='ok') as mock_ai:
         generate_daily_brief()
-    prompt = mock_ollama.call_args[0][0]
+    prompt = mock_ai.call_args[0][0]
     assert '2 contacts have overdue' in prompt
     assert '1 contacts have been dormant' in prompt
 
@@ -265,7 +195,7 @@ def test_generate_daily_brief_prompt_includes_contact_counts():
 SCORE_RESPONSE = "SCORE: 75\nREASONING: Good gallery fit for watercolors\nAPPROACH: Send email intro"
 
 
-def _patch_score_dependencies(ollama_response=SCORE_RESPONSE, cur=None):
+def _patch_score_dependencies(ai_response=SCORE_RESPONSE, cur=None):
     """Returns a dict of patches needed for score_contact_fit."""
     if cur is None:
         cur = make_cursor()
@@ -277,7 +207,7 @@ def _patch_score_dependencies(ollama_response=SCORE_RESPONSE, cur=None):
     return [
         patch('artcrm.engine.ai_planner.crm.get_contact', return_value=SAMPLE_CONTACT),
         patch('artcrm.engine.ai_planner.build_context_for_contact', return_value='some context'),
-        patch('artcrm.engine.ai_planner.call_ollama', return_value=ollama_response),
+        patch('artcrm.engine.ai_planner.call_ai', return_value=ai_response),
         patch('artcrm.engine.ai_planner.get_db_cursor', _mock_ctx),
         patch('artcrm.engine.ai_planner.crm.update_contact', return_value=True),
         patch('artcrm.engine.ai_planner.bus.emit'),
@@ -322,14 +252,14 @@ def test_score_contact_fit_parses_approach():
 
 
 def test_score_contact_fit_clamps_score_above_100():
-    patches = _patch_score_dependencies(ollama_response='SCORE: 150\nREASONING: Great\nAPPROACH: Visit')
+    patches = _patch_score_dependencies(ai_response='SCORE: 150\nREASONING: Great\nAPPROACH: Visit')
     with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:
         result = score_contact_fit(1)
     assert result['fit_score'] == 100
 
 
 def test_score_contact_fit_clamps_score_below_0():
-    patches = _patch_score_dependencies(ollama_response='SCORE: -10\nREASONING: Poor\nAPPROACH: Skip')
+    patches = _patch_score_dependencies(ai_response='SCORE: -10\nREASONING: Poor\nAPPROACH: Skip')
     with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:
         result = score_contact_fit(1)
     assert result['fit_score'] == 0
@@ -337,7 +267,7 @@ def test_score_contact_fit_clamps_score_below_0():
 
 def test_score_contact_fit_falls_back_to_raw_when_no_reasoning():
     raw = 'This gallery is a good fit for the artist.'
-    patches = _patch_score_dependencies(ollama_response=raw)
+    patches = _patch_score_dependencies(ai_response=raw)
     with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:
         result = score_contact_fit(1)
     assert result['reasoning'] == raw[:500]
@@ -371,6 +301,15 @@ def test_score_contact_fit_stores_in_db():
     assert 'INSERT INTO ai_analysis' in sql
 
 
+def test_score_contact_fit_uses_specified_model():
+    patches = _patch_score_dependencies()
+    with patches[0], patches[1], \
+         patch('artcrm.engine.ai_planner.call_ai', return_value=SCORE_RESPONSE) as mock_ai, \
+         patches[3], patches[4], patches[5]:
+        score_contact_fit(1, model='claude')
+    assert mock_ai.call_args[1].get('model') == 'claude'
+
+
 # ---------------------------------------------------------------------------
 # suggest_next_contacts
 # ---------------------------------------------------------------------------
@@ -380,7 +319,7 @@ def test_suggest_next_contacts_returns_list():
     with cursor_patch(cur), \
          patch('artcrm.engine.ai_planner.crm.get_overdue_contacts', return_value=[]), \
          patch('artcrm.engine.ai_planner.crm.get_shows', return_value=[]), \
-         patch('artcrm.engine.ai_planner.call_ollama', return_value='1. Contact X'), \
+         patch('artcrm.engine.ai_planner.call_ai', return_value='1. Contact X'), \
          patch('artcrm.engine.ai_planner.bus.emit'):
         result = suggest_next_contacts(limit=5)
     assert isinstance(result, list)
@@ -392,7 +331,7 @@ def test_suggest_next_contacts_respects_limit():
     with cursor_patch(cur), \
          patch('artcrm.engine.ai_planner.crm.get_overdue_contacts', return_value=contacts), \
          patch('artcrm.engine.ai_planner.crm.get_shows', return_value=[]), \
-         patch('artcrm.engine.ai_planner.call_ollama', return_value='ok'), \
+         patch('artcrm.engine.ai_planner.call_ai', return_value='ok'), \
          patch('artcrm.engine.ai_planner.bus.emit'):
         result = suggest_next_contacts(limit=3)
     assert len(result) <= 3
@@ -404,7 +343,7 @@ def test_suggest_next_contacts_deduplicates():
     with cursor_patch(cur), \
          patch('artcrm.engine.ai_planner.crm.get_overdue_contacts', return_value=[SAMPLE_CONTACT]), \
          patch('artcrm.engine.ai_planner.crm.get_shows', return_value=[]), \
-         patch('artcrm.engine.ai_planner.call_ollama', return_value='ok'), \
+         patch('artcrm.engine.ai_planner.call_ai', return_value='ok'), \
          patch('artcrm.engine.ai_planner.bus.emit'):
         result = suggest_next_contacts(limit=5)
     ids = [r['contact'].id for r in result]
@@ -416,7 +355,7 @@ def test_suggest_next_contacts_emits_event():
     with cursor_patch(cur), \
          patch('artcrm.engine.ai_planner.crm.get_overdue_contacts', return_value=[]), \
          patch('artcrm.engine.ai_planner.crm.get_shows', return_value=[]), \
-         patch('artcrm.engine.ai_planner.call_ollama', return_value='ok'), \
+         patch('artcrm.engine.ai_planner.call_ai', return_value='ok'), \
          patch('artcrm.engine.ai_planner.bus.emit') as mock_emit:
         suggest_next_contacts()
     event_name = mock_emit.call_args[0][0]
@@ -428,7 +367,7 @@ def test_suggest_next_contacts_result_has_expected_keys():
     with cursor_patch(cur), \
          patch('artcrm.engine.ai_planner.crm.get_overdue_contacts', return_value=[SAMPLE_CONTACT]), \
          patch('artcrm.engine.ai_planner.crm.get_shows', return_value=[]), \
-         patch('artcrm.engine.ai_planner.call_ollama', return_value='ok'), \
+         patch('artcrm.engine.ai_planner.call_ai', return_value='ok'), \
          patch('artcrm.engine.ai_planner.bus.emit'):
         result = suggest_next_contacts(limit=5)
     assert all('contact' in r and 'reasoning' in r for r in result)
@@ -461,16 +400,16 @@ def test_analyze_all_unscored_calls_score_for_each():
          patch('artcrm.engine.ai_planner.score_contact_fit') as mock_score:
         analyze_all_unscored_contacts()
     assert mock_score.call_count == 2
-    mock_score.assert_any_call(3)
-    mock_score.assert_any_call(7)
+    mock_score.assert_any_call(3, model=None)
+    mock_score.assert_any_call(7, model=None)
 
 
 def test_analyze_all_unscored_continues_on_error():
     cur = make_cursor(fetchall=[{'id': 1}, {'id': 2}])
 
-    def score_raises_on_first(contact_id):
+    def score_raises_on_first(contact_id, model=None):
         if contact_id == 1:
-            raise RuntimeError('Ollama down')
+            raise RuntimeError('DeepSeek down')
 
     with cursor_patch(cur), \
          patch('artcrm.engine.ai_planner.score_contact_fit', side_effect=score_raises_on_first):

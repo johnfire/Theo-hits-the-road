@@ -439,7 +439,7 @@ class TestScore:
         with patch("artcrm.engine.ai_planner.score_contact_fit") as mock_score:
             mock_score.return_value = mock_result
             runner.invoke(cli, ["score", "42"])
-        mock_score.assert_called_once_with(42)
+        mock_score.assert_called_once_with(42, model='deepseek-chat')
 
     def test_exception_handled_gracefully(self, runner):
         with patch("artcrm.engine.ai_planner.score_contact_fit") as mock_score:
@@ -467,13 +467,13 @@ class TestSuggest:
         with patch("artcrm.engine.ai_planner.suggest_next_contacts") as mock_suggest:
             mock_suggest.return_value = []
             runner.invoke(cli, ["suggest"])
-        mock_suggest.assert_called_once_with(limit=5)
+        mock_suggest.assert_called_once_with(limit=5, model='deepseek-chat')
 
     def test_custom_limit(self, runner):
         with patch("artcrm.engine.ai_planner.suggest_next_contacts") as mock_suggest:
             mock_suggest.return_value = []
             runner.invoke(cli, ["suggest", "--limit", "10"])
-        mock_suggest.assert_called_once_with(limit=10)
+        mock_suggest.assert_called_once_with(limit=10, model='deepseek-chat')
 
     def test_exception_handled_gracefully(self, runner):
         with patch("artcrm.engine.ai_planner.suggest_next_contacts") as mock_suggest:
@@ -510,7 +510,7 @@ class TestDraft:
             mock_draft.return_value = self.DRAFT_RESULT
             runner.invoke(cli, ["draft", "42", "--language", "en", "--no-portfolio"])
         mock_draft.assert_called_once_with(
-            contact_id=42, language="en", include_portfolio_link=False
+            contact_id=42, language="en", include_portfolio_link=False, model='claude'
         )
 
     def test_value_error_handled(self, runner):

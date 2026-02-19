@@ -1,56 +1,22 @@
 """
-AI Planner - Ollama Integration
-Uses local Ollama for routine AI tasks: daily brief, fit scoring, prioritization.
+AI Planner - Routine AI tasks (scoring, briefs, suggestions).
+Uses DeepSeek or Claude via the unified ai_client module.
 Stores all reasoning in ai_analysis table for transparency.
 """
 
 import logging
-import requests
 from datetime import date, timedelta
 from typing import List, Dict, Any, Optional
 
 from artcrm.db.connection import get_db_cursor
 from artcrm.logging_config import log_call
 from artcrm.engine import crm
+from artcrm.engine.ai_client import call_ai
 from artcrm.models import Contact, Show
 from artcrm.bus.events import bus, EVENT_ANALYSIS_COMPLETE, EVENT_SUGGESTION_READY
 from artcrm.config import config
 
 logger = logging.getLogger(__name__)
-
-
-# =============================================================================
-# OLLAMA CLIENT
-# =============================================================================
-
-@log_call
-def call_ollama(prompt: str, system: Optional[str] = None) -> str:
-    """
-    Call Ollama API with a prompt.
-    Returns the model's response text.
-    """
-    url = f"{config.OLLAMA_BASE_URL}/api/generate"
-
-    payload = {
-        "model": config.OLLAMA_MODEL,
-        "prompt": prompt,
-        "stream": False
-    }
-
-    if system:
-        payload["system"] = system
-
-    try:
-        logger.debug(f"Calling Ollama at {url} with model {config.OLLAMA_MODEL}")
-        response = requests.post(url, json=payload, timeout=(10, 60))  # (connect, read)
-        response.raise_for_status()
-
-        result = response.json()
-        return result.get('response', '')
-
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Ollama API error: {e}")
-        raise RuntimeError(f"Failed to call Ollama: {e}")
 
 
 # =============================================================================
@@ -134,12 +100,13 @@ Preferred Approach: Personal visits for local venues, email for distant/online p
 # =============================================================================
 
 @log_call
-def generate_daily_brief() -> str:
+def generate_daily_brief(model: Optional[str] = None) -> str:
     """
     Generate AI daily brief: who to contact this week and why.
     Returns formatted brief as text.
     """
-    logger.info("Generating daily brief with Ollama")
+    _model = model or config.DEFAULT_AI_MODEL
+    logger.info(f"Generating daily brief with {_model}")
 
     # Get overdue contacts
     overdue = crm.get_overdue_contacts()
@@ -179,19 +146,20 @@ Based on this information, provide a brief (200 words) daily plan:
 
 Be specific and actionable. Focus on 3-5 specific contacts."""
 
-    response = call_ollama(prompt)
+    response = call_ai(prompt, model=_model)
 
     return response
 
 
 @log_call
-def score_contact_fit(contact_id: int) -> Dict[str, Any]:
+def score_contact_fit(contact_id: int, model: Optional[str] = None) -> Dict[str, Any]:
     """
     Score how well a contact fits the artist's work (0-100).
     Stores analysis in ai_analysis table.
     Returns: dict with fit_score, reasoning, suggested_approach
     """
-    logger.info(f"Scoring fit for contact #{contact_id}")
+    _model = model or config.DEFAULT_AI_MODEL
+    logger.info(f"Scoring fit for contact #{contact_id} with {_model}")
 
     contact = crm.get_contact(contact_id)
     if not contact:
@@ -223,7 +191,7 @@ SCORE: [0-100]
 REASONING: [your reasoning]
 APPROACH: [suggested approach]"""
 
-    response = call_ollama(prompt)
+    response = call_ai(prompt, model=_model)
 
     # Parse response (simple parsing)
     lines = response.split('\n')
@@ -258,7 +226,7 @@ APPROACH: [suggested approach]"""
             ) VALUES (
                 %s, NOW(), %s, %s, %s, %s, %s, NOW()
             )
-        """, (contact_id, config.OLLAMA_MODEL, reasoning, suggested_approach, fit_score, response))
+        """, (contact_id, _model, reasoning, suggested_approach, fit_score, response))
 
     # Update contact fit_score
     crm.update_contact(contact_id, {'fit_score': fit_score})
@@ -281,12 +249,13 @@ APPROACH: [suggested approach]"""
 
 
 @log_call
-def suggest_next_contacts(limit: int = 5) -> List[Dict[str, Any]]:
+def suggest_next_contacts(limit: int = 5, model: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     AI suggests which contacts to reach out to next.
     Returns list of contacts with reasoning.
     """
-    logger.info(f"Getting AI suggestions for next {limit} contacts")
+    _model = model or config.DEFAULT_AI_MODEL
+    logger.info(f"Getting AI suggestions for next {limit} contacts using {_model}")
 
     # Get candidates: overdue + dormant with fit_score
     overdue = crm.get_overdue_contacts()[:10]
@@ -337,7 +306,7 @@ Select the top {limit} contacts to reach out to this week. For each, explain:
 
 Format as numbered list."""
 
-    response = call_ollama(prompt)
+    response = call_ai(prompt, model=_model)
 
     # Emit event
     bus.emit(EVENT_SUGGESTION_READY, {
@@ -359,7 +328,7 @@ Format as numbered list."""
 # =============================================================================
 
 @log_call
-def analyze_all_unscored_contacts(limit: int = 10) -> int:
+def analyze_all_unscored_contacts(limit: int = 10, model: Optional[str] = None) -> int:
     """
     Score all contacts that don't have a fit_score yet.
     Returns: number of contacts analyzed
@@ -379,7 +348,7 @@ def analyze_all_unscored_contacts(limit: int = 10) -> int:
 
     for contact_id in contact_ids:
         try:
-            score_contact_fit(contact_id)
+            score_contact_fit(contact_id, model=model)
         except Exception as e:
             logger.error(f"Failed to score contact {contact_id}: {e}")
 
