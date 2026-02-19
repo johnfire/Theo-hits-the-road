@@ -17,6 +17,8 @@ Features:
 import argparse
 import logging
 import sys
+
+logger = logging.getLogger('import_xlsx')
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional, Dict, List, Tuple
@@ -157,10 +159,10 @@ def fuzzy_match_venue(venue_name: str, contacts: List[Dict], threshold: int = 80
             best_match_id = contact['id']
 
     if best_score >= threshold:
-        logging.info(f"Fuzzy matched '{venue_name}' to contact ID {best_match_id} (score: {best_score})")
+        logger.info(f"Fuzzy matched '{venue_name}' to contact ID {best_match_id} (score: {best_score})")
         return best_match_id
     else:
-        logging.warning(f"No fuzzy match found for venue '{venue_name}' (best score: {best_score})")
+        logger.warning(f"No fuzzy match found for venue '{venue_name}' (best score: {best_score})")
         return None
 
 
@@ -197,7 +199,7 @@ class DatabaseConnection:
     def execute(self, query: str, params: tuple = None):
         """Execute query (or log in dry-run mode)."""
         if self.dry_run:
-            logging.info(f"[DRY-RUN] Would execute: {query[:100]}... with params {params}")
+            logger.info(f"[DRY-RUN] Would execute: {query[:100]}... with params {params}")
             return None
         else:
             self.cursor.execute(query, params)
@@ -230,12 +232,12 @@ def get_or_create_contact(db: DatabaseConnection, contact_data: Dict, dedup_key:
 
         existing = db.fetchone()
         if existing:
-            logging.info(f"Contact exists: {contact_data['name']} - ID {existing['id']}")
+            logger.info(f"Contact exists: {contact_data['name']} - ID {existing['id']}")
             # TODO: Update empty fields (Phase 4 requirement)
             return existing['id']
 
     # Create new contact
-    logging.info(f"Creating new contact: {contact_data['name']}")
+    logger.info(f"Creating new contact: {contact_data['name']}")
 
     if db.dry_run:
         return None  # Would create, but in dry-run
@@ -257,7 +259,7 @@ def get_or_create_contact(db: DatabaseConnection, contact_data: Dict, dedup_key:
 
 def create_interaction(db: DatabaseConnection, interaction_data: Dict):
     """Create an interaction record."""
-    logging.debug(f"Creating interaction for contact {interaction_data['contact_id']}: {interaction_data['summary'][:50]}...")
+    logger.debug(f"Creating interaction for contact {interaction_data['contact_id']}: {interaction_data['summary'][:50]}...")
 
     if db.dry_run:
         return
@@ -282,16 +284,16 @@ def import_contacts_leads(db: DatabaseConnection, excel_file) -> Tuple[int, int,
     Import main contacts & leads sheet.
     Returns: (created, updated, skipped)
     """
-    logging.info("=" * 80)
-    logging.info("IMPORTING: contacts  leads")
-    logging.info("=" * 80)
+    logger.info("=" * 80)
+    logger.info("IMPORTING: contacts  leads")
+    logger.info("=" * 80)
 
     # Read sheet without header, we'll extract it manually
     df = pd.read_excel(excel_file, sheet_name="contacts  leads", header=None)
 
     # Row 3 has headers
     headers = df.iloc[3].tolist()
-    logging.info(f"Headers: {headers}")
+    logger.info(f"Headers: {headers}")
 
     # Data starts around row 12 (after people and empty rows)
     # Find first row where column 13 (name) has a value that's not "name" header or person marker
@@ -316,7 +318,7 @@ def import_contacts_leads(db: DatabaseConnection, excel_file) -> Tuple[int, int,
 
         # Skip if this is a "people" entry (city == "people")
         if city == 'people':
-            logging.debug(f"Skipping person: {name}")
+            logger.debug(f"Skipping person: {name}")
             skipped += 1
             continue
 
@@ -435,7 +437,7 @@ def import_contacts_leads(db: DatabaseConnection, excel_file) -> Tuple[int, int,
                 WHERE id = %s
             """, (new_status, contact_id))
 
-    logging.info(f"Contacts: {created} created, {updated} updated, {skipped} skipped")
+    logger.info(f"Contacts: {created} created, {updated} updated, {skipped} skipped")
     return (created, updated, skipped)
 
 
@@ -444,9 +446,9 @@ def import_show_dates(db: DatabaseConnection, excel_file) -> int:
     Import show dates sheet.
     Returns: number of shows created
     """
-    logging.info("=" * 80)
-    logging.info("IMPORTING: show dates")
-    logging.info("=" * 80)
+    logger.info("=" * 80)
+    logger.info("IMPORTING: show dates")
+    logger.info("=" * 80)
 
     df = pd.read_excel(excel_file, sheet_name="show dates", header=None)
 
@@ -493,7 +495,7 @@ def import_show_dates(db: DatabaseConnection, excel_file) -> int:
             'notes': None,
         }
 
-        logging.info(f"Creating show: {show_data['name']}")
+        logger.info(f"Creating show: {show_data['name']}")
 
         if not db.dry_run:
             db.execute("""
@@ -508,7 +510,7 @@ def import_show_dates(db: DatabaseConnection, excel_file) -> int:
 
         created += 1
 
-    logging.info(f"Shows: {created} created")
+    logger.info(f"Shows: {created} created")
     return created
 
 
@@ -517,9 +519,9 @@ def import_online_platforms(db: DatabaseConnection, excel_file) -> int:
     Import online platforms sheet.
     Returns: number of platforms created
     """
-    logging.info("=" * 80)
-    logging.info("IMPORTING: on line")
-    logging.info("=" * 80)
+    logger.info("=" * 80)
+    logger.info("IMPORTING: on line")
+    logger.info("=" * 80)
 
     df = pd.read_excel(excel_file, sheet_name="on line", header=None)
 
@@ -578,7 +580,7 @@ def import_online_platforms(db: DatabaseConnection, excel_file) -> int:
         elif db.dry_run:
             created += 1
 
-    logging.info(f"Online platforms: {created} created")
+    logger.info(f"Online platforms: {created} created")
     return created
 
 
@@ -587,9 +589,9 @@ def export_notes_sheets(excel_file) -> int:
     Export notes sheets to markdown files.
     Returns: number of files created
     """
-    logging.info("=" * 80)
-    logging.info("EXPORTING: notes sheets to markdown")
-    logging.info("=" * 80)
+    logger.info("=" * 80)
+    logger.info("EXPORTING: notes sheets to markdown")
+    logger.info("=" * 80)
 
     NOTES_DIR.mkdir(exist_ok=True)
 
@@ -626,13 +628,13 @@ def export_notes_sheets(excel_file) -> int:
                     if row_text.strip():
                         f.write(f"{row_text}\n\n")
 
-            logging.info(f"Exported: {filename}")
+            logger.info(f"Exported: {filename}")
             created += 1
 
         except Exception as e:
-            logging.error(f"Error exporting sheet '{sheet_name}': {e}")
+            logger.error(f"Error exporting sheet '{sheet_name}': {e}")
 
-    logging.info(f"Notes files: {created} created in {NOTES_DIR}")
+    logger.info(f"Notes files: {created} created in {NOTES_DIR}")
     return created
 
 
@@ -644,7 +646,7 @@ def run_import(dry_run: bool = False, log_level: str = "INFO"):
     """Main import function."""
 
     # Setup logging
-    log_file = project_root / "logs" / f"import_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+    log_file = Path.home() / "logs" / f"import_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
     log_file.parent.mkdir(exist_ok=True)
 
     logging.basicConfig(
@@ -656,23 +658,23 @@ def run_import(dry_run: bool = False, log_level: str = "INFO"):
         ]
     )
 
-    logging.info("=" * 80)
-    logging.info("ART CRM SPREADSHEET IMPORT")
-    logging.info("=" * 80)
-    logging.info(f"Mode: {'DRY-RUN' if dry_run else 'LIVE'}")
-    logging.info(f"Source: {XLSX_PATH}")
-    logging.info(f"Log file: {log_file}")
-    logging.info("=" * 80)
+    logger.info("=" * 80)
+    logger.info("ART CRM SPREADSHEET IMPORT")
+    logger.info("=" * 80)
+    logger.info(f"Mode: {'DRY-RUN' if dry_run else 'LIVE'}")
+    logger.info(f"Source: {XLSX_PATH}")
+    logger.info(f"Log file: {log_file}")
+    logger.info("=" * 80)
 
     if not XLSX_PATH.exists():
-        logging.error(f"Excel file not found: {XLSX_PATH}")
+        logger.error(f"Excel file not found: {XLSX_PATH}")
         return 1
 
     # Load Excel file
     try:
         excel_file = pd.ExcelFile(XLSX_PATH)
     except Exception as e:
-        logging.error(f"Failed to read Excel file: {e}")
+        logger.error(f"Failed to read Excel file: {e}")
         return 1
 
     stats = {
@@ -692,7 +694,7 @@ def run_import(dry_run: bool = False, log_level: str = "INFO"):
             stats['contacts_updated'] += updated
             stats['contacts_skipped'] += skipped
     except Exception as e:
-        logging.error(f"Error importing contacts: {e}", exc_info=True)
+        logger.error(f"Error importing contacts: {e}", exc_info=True)
         stats['errors'] += 1
 
     # Import show dates
@@ -701,7 +703,7 @@ def run_import(dry_run: bool = False, log_level: str = "INFO"):
             created = import_show_dates(db, excel_file)
             stats['shows_created'] += created
     except Exception as e:
-        logging.error(f"Error importing shows: {e}", exc_info=True)
+        logger.error(f"Error importing shows: {e}", exc_info=True)
         stats['errors'] += 1
 
     # Import online platforms
@@ -710,7 +712,7 @@ def run_import(dry_run: bool = False, log_level: str = "INFO"):
             created = import_online_platforms(db, excel_file)
             stats['contacts_created'] += created
     except Exception as e:
-        logging.error(f"Error importing online platforms: {e}", exc_info=True)
+        logger.error(f"Error importing online platforms: {e}", exc_info=True)
         stats['errors'] += 1
 
     # Export notes sheets to markdown
@@ -718,21 +720,21 @@ def run_import(dry_run: bool = False, log_level: str = "INFO"):
         created = export_notes_sheets(excel_file)
         # (no stat tracking for notes files)
     except Exception as e:
-        logging.error(f"Error exporting notes: {e}", exc_info=True)
+        logger.error(f"Error exporting notes: {e}", exc_info=True)
         stats['errors'] += 1
 
     # Print summary
-    logging.info("=" * 80)
-    logging.info("IMPORT COMPLETE")
-    logging.info("=" * 80)
-    logging.info(f"Contacts created: {stats['contacts_created']}")
-    logging.info(f"Contacts updated: {stats['contacts_updated']}")
-    logging.info(f"Contacts skipped: {stats['contacts_skipped']}")
-    logging.info(f"Interactions created: {stats['interactions_created']}")
-    logging.info(f"Shows created: {stats['shows_created']}")
-    logging.info(f"Errors: {stats['errors']}")
-    logging.info(f"Log file: {log_file}")
-    logging.info("=" * 80)
+    logger.info("=" * 80)
+    logger.info("IMPORT COMPLETE")
+    logger.info("=" * 80)
+    logger.info(f"Contacts created: {stats['contacts_created']}")
+    logger.info(f"Contacts updated: {stats['contacts_updated']}")
+    logger.info(f"Contacts skipped: {stats['contacts_skipped']}")
+    logger.info(f"Interactions created: {stats['interactions_created']}")
+    logger.info(f"Shows created: {stats['shows_created']}")
+    logger.info(f"Errors: {stats['errors']}")
+    logger.info(f"Log file: {log_file}")
+    logger.info("=" * 80)
 
     return 0 if stats['errors'] == 0 else 1
 

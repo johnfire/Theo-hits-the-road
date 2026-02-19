@@ -3,7 +3,7 @@ Logging configuration for Art CRM.
 
 Single 'artcrm' logger used across all modules.
 
-  Log file : logs/artcrm.log
+  Log file : ~/logs/artcrm.log
   Rotation : 5 MB × 3 backups
   Level    : LOG_LEVEL env var (DEBUG / INFO / WARNING / ERROR / CRITICAL)
              defaults to INFO when unset
@@ -34,7 +34,7 @@ import os
 import time
 from pathlib import Path
 
-_LOG_DIR = Path(__file__).parent.parent / "logs"
+_LOG_DIR = Path.home() / "logs"
 _LOG_FILE = _LOG_DIR / "artcrm.log"
 _FORMAT = "%(asctime)s | %(levelname)-8s | %(message)s"
 _DATE_FORMAT = "%Y-%m-%d %H:%M:%S"

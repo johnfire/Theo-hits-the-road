@@ -9,6 +9,8 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 from pathlib import Path
 
+from artcrm.logging_config import log_call
+
 from anthropic import Anthropic
 
 from artcrm.engine import crm
@@ -27,6 +29,7 @@ DRAFTS_DIR.mkdir(exist_ok=True, parents=True)
 # CLAUDE API CLIENT
 # =============================================================================
 
+@log_call
 def call_claude(prompt: str, system: Optional[str] = None, max_tokens: int = 2000) -> str:
     """
     Call Claude API for high-quality text generation.
@@ -101,6 +104,7 @@ def build_contact_context(contact: Contact) -> str:
 # DRAFT GENERATION
 # =============================================================================
 
+@log_call
 def draft_first_contact_letter(
     contact_id: int,
     language: Optional[str] = None,
@@ -201,6 +205,7 @@ SUBJECT: {subject}
     }
 
 
+@log_call
 def draft_follow_up_letter(
     contact_id: int,
     previous_interaction_summary: str,
@@ -282,6 +287,7 @@ SUBJECT: {subject}
 """
 
     draft_path.write_text(draft_content)
+    logger.info(f"Follow-up draft saved to {draft_path}")
 
     bus.emit(EVENT_DRAFT_READY, {
         'contact_id': contact_id,

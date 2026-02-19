@@ -9,6 +9,7 @@ from datetime import date, timedelta
 from typing import List, Optional, Dict, Any
 
 from artcrm.db.connection import get_db_cursor
+from artcrm.logging_config import log_call
 from artcrm.models import Contact, Interaction, Show
 from artcrm.bus.events import bus, EVENT_CONTACT_CREATED, EVENT_CONTACT_UPDATED, EVENT_CONTACT_DELETED, EVENT_INTERACTION_LOGGED, EVENT_SHOW_CREATED, EVENT_SHOW_UPDATED
 from artcrm.config import config
@@ -37,6 +38,7 @@ def _validate_columns(updates: Dict[str, Any], allowed: set, entity: str) -> Non
 # CONTACT OPERATIONS
 # =============================================================================
 
+@log_call
 def create_contact(contact: Contact) -> int:
     """
     Create a new contact.
@@ -80,6 +82,7 @@ def get_contact(contact_id: int) -> Optional[Contact]:
         return None
 
 
+@log_call
 def update_contact(contact_id: int, updates: Dict[str, Any]) -> bool:
     """
     Update contact fields.
@@ -114,6 +117,7 @@ def update_contact(contact_id: int, updates: Dict[str, Any]) -> bool:
         return False
 
 
+@log_call
 def delete_contact(contact_id: int, soft: bool = True) -> bool:
     """
     Delete contact (soft delete by default).
@@ -238,6 +242,7 @@ def get_dormant_contacts() -> List[Contact]:
 # INTERACTION OPERATIONS
 # =============================================================================
 
+@log_call
 def log_interaction(interaction: Interaction) -> int:
     """
     Log an interaction for a contact.
@@ -286,6 +291,7 @@ def get_interactions(contact_id: int) -> List[Interaction]:
 # SHOW OPERATIONS
 # =============================================================================
 
+@log_call
 def create_show(show: Show) -> int:
     """
     Create a new show.
@@ -348,6 +354,7 @@ def get_shows(
         return [Show(**row) for row in rows]
 
 
+@log_call
 def update_show(show_id: int, updates: Dict[str, Any]) -> bool:
     """Update show fields."""
     if not updates:

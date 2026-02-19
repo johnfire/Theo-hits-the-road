@@ -12,23 +12,25 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, Literal
 from dataclasses import dataclass
 
+from artcrm.logging_config import log_call
+
 import requests
 from tqdm import tqdm
+
+logger = logging.getLogger(__name__)
 
 try:
     import googlemaps
     GOOGLE_MAPS_AVAILABLE = True
 except ImportError:
     GOOGLE_MAPS_AVAILABLE = False
-    logging.warning("googlemaps library not installed. Google Maps API will not be available.")
+    logger.warning("googlemaps library not installed. Google Maps API will not be available.")
 
 from artcrm.engine import crm, ai_planner
 from artcrm.engine.email_composer import call_claude
 from artcrm.models import Contact
 from artcrm.bus.events import bus, EVENT_CONTACT_CREATED
 from artcrm.config import config
-
-logger = logging.getLogger(__name__)
 
 # Scout results storage
 SCOUT_DIR = Path(__file__).parent.parent.parent / "data" / "scout_results"
@@ -343,6 +345,7 @@ def check_duplicate(candidate: LeadCandidate) -> Optional[Contact]:
     return None
 
 
+@log_call
 def insert_lead(candidate: LeadCandidate, skip_if_exists: bool = True) -> Optional[int]:
     """
     Insert lead candidate into database.
@@ -404,6 +407,7 @@ def insert_lead(candidate: LeadCandidate, skip_if_exists: bool = True) -> Option
 # MAIN SCOUT FUNCTION
 # =============================================================================
 
+@log_call
 def scout_city(
     city: str,
     country: str = 'DE',

@@ -209,7 +209,7 @@ Source file: `data/art-marketing.xlsx`
 - **Never overwrites** existing data — only fills empty fields.
 - **Re-runnable:** safe to run multiple times.
 - **Dry-run flag:** `--dry-run` shows what would change without writing.
-- **Import report:** written to `logs/import_<timestamp>.log`.
+- **Import report:** written to `~/logs/import_<timestamp>.log`.
 
 ### 5-Column Conversion
 The spreadsheet tracks contact attempts in 5 flat columns (1st try → 5th try).

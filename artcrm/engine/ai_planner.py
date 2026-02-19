@@ -10,6 +10,7 @@ from datetime import date, timedelta
 from typing import List, Dict, Any, Optional
 
 from artcrm.db.connection import get_db_cursor
+from artcrm.logging_config import log_call
 from artcrm.engine import crm
 from artcrm.models import Contact, Show
 from artcrm.bus.events import bus, EVENT_ANALYSIS_COMPLETE, EVENT_SUGGESTION_READY
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 # OLLAMA CLIENT
 # =============================================================================
 
+@log_call
 def call_ollama(prompt: str, system: Optional[str] = None) -> str:
     """
     Call Ollama API with a prompt.
@@ -63,6 +65,7 @@ def build_context_for_contact(contact_id: int) -> str:
     # Get contact
     contact = crm.get_contact(contact_id)
     if not contact:
+        logger.warning(f"build_context_for_contact: contact_id={contact_id} not found, returning empty context")
         return ""
 
     # Get interactions
@@ -130,6 +133,7 @@ Preferred Approach: Personal visits for local venues, email for distant/online p
 # AI ANALYSIS FUNCTIONS
 # =============================================================================
 
+@log_call
 def generate_daily_brief() -> str:
     """
     Generate AI daily brief: who to contact this week and why.
@@ -180,6 +184,7 @@ Be specific and actionable. Focus on 3-5 specific contacts."""
     return response
 
 
+@log_call
 def score_contact_fit(contact_id: int) -> Dict[str, Any]:
     """
     Score how well a contact fits the artist's work (0-100).
@@ -275,6 +280,7 @@ APPROACH: [suggested approach]"""
     }
 
 
+@log_call
 def suggest_next_contacts(limit: int = 5) -> List[Dict[str, Any]]:
     """
     AI suggests which contacts to reach out to next.
@@ -352,6 +358,7 @@ Format as numbered list."""
 # BATCH OPERATIONS
 # =============================================================================
 
+@log_call
 def analyze_all_unscored_contacts(limit: int = 10) -> int:
     """
     Score all contacts that don't have a fit_score yet.
