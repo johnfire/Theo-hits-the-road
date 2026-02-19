@@ -86,7 +86,7 @@ def draft_first_contact_letter(
 
     Returns: dict with subject, body, language, metadata
     """
-    _model = model or 'claude'
+    _model = model or 'deepseek-reasoner'
     logger.info(f"Drafting first contact letter for contact #{contact_id} using {_model}")
 
     contact = crm.get_contact(contact_id)
@@ -190,7 +190,7 @@ def draft_follow_up_letter(
 
     Returns: draft dict
     """
-    _model = model or 'claude'
+    _model = model or 'deepseek-reasoner'
     logger.info(f"Drafting follow-up letter for contact #{contact_id} using {_model}")
 
     contact = crm.get_contact(contact_id)

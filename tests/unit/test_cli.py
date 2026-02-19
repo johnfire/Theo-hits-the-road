@@ -510,7 +510,7 @@ class TestDraft:
             mock_draft.return_value = self.DRAFT_RESULT
             runner.invoke(cli, ["draft", "42", "--language", "en", "--no-portfolio"])
         mock_draft.assert_called_once_with(
-            contact_id=42, language="en", include_portfolio_link=False, model='claude'
+            contact_id=42, language="en", include_portfolio_link=False, model='deepseek-reasoner'
         )
 
     def test_value_error_handled(self, runner):

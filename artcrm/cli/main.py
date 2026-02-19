@@ -448,7 +448,7 @@ def suggest(limit, model):
 @click.argument('contact_id', type=int)
 @click.option('--language', help='Override contact language (de/en/fr)')
 @click.option('--no-portfolio', is_flag=True, help='Exclude portfolio link')
-@click.option('--model', type=click.Choice(AI_MODEL_CHOICES), default='claude',
+@click.option('--model', type=click.Choice(AI_MODEL_CHOICES), default='deepseek-reasoner',
               show_default=True, help='AI model to use')
 @log_call
 def draft(contact_id, language, no_portfolio, model):
@@ -490,7 +490,7 @@ def draft(contact_id, language, no_portfolio, model):
 @cli.command('followup')
 @click.argument('contact_id', type=int)
 @click.option('--language', help='Override contact language (de/en/fr)')
-@click.option('--model', type=click.Choice(AI_MODEL_CHOICES), default='claude',
+@click.option('--model', type=click.Choice(AI_MODEL_CHOICES), default='deepseek-reasoner',
               show_default=True, help='AI model to use')
 @log_call
 def followup(contact_id, language, model):
