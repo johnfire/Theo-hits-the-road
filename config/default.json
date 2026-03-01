@@ -1,0 +1,28 @@
+{
+  "_comment": "Baseline config — no secrets. Secrets live in .env only.",
+
+  "follow_up_months": 4,
+  "dormant_threshold_months": 12,
+
+  "ai": {
+    "default_model": "deepseek-chat",
+    "draft_model": "deepseek-reasoner",
+    "context_window_days": 90
+  },
+
+  "recon": {
+    "default_radius_km": 10,
+    "default_types": ["gallery", "cafe", "coworking"]
+  },
+
+  "contacts": {
+    "default_list_limit": 500,
+    "suggest_default_limit": 5,
+    "dormant_display_limit": 20
+  },
+
+  "logging": {
+    "dir": "~/logs",
+    "level": "INFO"
+  }
+}

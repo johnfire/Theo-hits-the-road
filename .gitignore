@@ -211,6 +211,7 @@ __marimo__/
 data/art-marketing.xlsx
 data/artist_bio.txt
 logs/
+tmp/
 *.log
 
 # Don't commit local database backups

@@ -1,20 +1,19 @@
 #!/bin/bash
 # Art CRM CLI Wrapper
-# Activates venv and runs CLI
+# Activates venv and runs the CLI. Place a symlink at ~/bin/crm for global access.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_ROOT"
 
-# Activate venv if not already activated
 if [ -z "$VIRTUAL_ENV" ]; then
     source venv/bin/activate
 fi
 
-# Run CLI
 python3 -c "
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path.cwd()))
-from artcrm.cli.main import cli
+from src.cli.main import cli
 cli()
 " "$@"
