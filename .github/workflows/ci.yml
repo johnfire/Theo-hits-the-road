@@ -48,8 +48,8 @@ jobs:
         DATABASE_URL: postgresql://artcrm_admindude:test_password@localhost:5432/artcrm_test
         PGPASSWORD: test_password
       run: |
-        psql -U artcrm_admindude -h localhost -d artcrm_test -f artcrm/db/migrations/001_initial_schema.sql
-        psql -U artcrm_admindude -h localhost -d artcrm_test -f artcrm/db/migrations/002_seed_lookup_values.sql
+        psql -U artcrm_admindude -h localhost -d artcrm_test -f src/db/migrations/001_initial_schema.sql
+        psql -U artcrm_admindude -h localhost -d artcrm_test -f src/db/migrations/002_seed_lookup_values.sql
 
     - name: Run tests
       env:
