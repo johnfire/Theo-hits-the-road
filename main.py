@@ -13,9 +13,9 @@ import os
 
 # Ensure we're running from the project root with the venv python
 PYTHON = sys.executable
-CRM = [PYTHON, "artcrm/cli/main.py"]
+CRM = [PYTHON, "src/cli/main.py"]
 
-# Project root on PYTHONPATH so 'artcrm' package is importable
+# Project root on PYTHONPATH so 'src' package is importable
 ENV = os.environ.copy()
 ENV["PYTHONPATH"] = os.path.dirname(os.path.abspath(__file__))
 

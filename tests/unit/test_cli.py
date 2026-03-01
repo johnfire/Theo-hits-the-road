@@ -1,11 +1,11 @@
 """
-Unit tests for artcrm/cli/main.py.
+Unit tests for src/cli/main.py.
 
 Mocking strategy:
-  - patch artcrm.cli.main.crm for all CRM-level calls
-  - patch artcrm.cli.main.configure_logging (autouse) to prevent file I/O
+  - patch src.cli.main.crm for all CRM-level calls
+  - patch src.cli.main.configure_logging (autouse) to prevent file I/O
   - AI commands import their modules lazily inside the function body, so
-    we patch at artcrm.engine.<module>.<function>
+    we patch at src.engine.<module>.<function>
   - Use click.testing.CliRunner to invoke commands end-to-end
 """
 
@@ -15,8 +15,8 @@ from unittest.mock import MagicMock, patch, call
 
 from click.testing import CliRunner
 
-from artcrm.cli.main import cli, _prompt_date, _prompt_email
-from artcrm.models import Contact, Interaction, Show
+from src.cli.main import cli, _prompt_date, _prompt_email
+from src.models import Contact, Interaction, Show
 
 
 # ---------------------------------------------------------------------------
@@ -54,7 +54,7 @@ def runner():
 @pytest.fixture(autouse=True)
 def no_logging():
     """Prevent configure_logging from creating log files during tests."""
-    with patch("artcrm.cli.main.configure_logging"):
+    with patch("src.cli.main.configure_logging"):
         yield
 
 
@@ -65,14 +65,14 @@ def no_logging():
 class TestContactsList:
 
     def test_empty_result(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.search_contacts.return_value = []
             result = runner.invoke(cli, ["contacts", "list"])
         assert result.exit_code == 0
         assert "No contacts found" in result.output
 
     def test_lists_contacts(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.search_contacts.return_value = [SAMPLE_CONTACT]
             result = runner.invoke(cli, ["contacts", "list"])
         assert result.exit_code == 0
@@ -81,7 +81,7 @@ class TestContactsList:
         assert "gallery" in result.output
 
     def test_passes_filters_to_crm(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.search_contacts.return_value = []
             runner.invoke(cli, [
                 "contacts", "list",
@@ -95,7 +95,7 @@ class TestContactsList:
         )
 
     def test_default_limit_is_500(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.search_contacts.return_value = []
             runner.invoke(cli, ["contacts", "list"])
         _, kwargs = mock_crm.search_contacts.call_args
@@ -109,14 +109,14 @@ class TestContactsList:
 class TestContactsShow:
 
     def test_not_found(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_contact.return_value = None
             result = runner.invoke(cli, ["contacts", "show", "99"])
         assert result.exit_code == 0
         assert "not found" in result.output
 
     def test_shows_contact_details(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_contact.return_value = SAMPLE_CONTACT
             mock_crm.get_interactions.return_value = []
             result = runner.invoke(cli, ["contacts", "show", "1"])
@@ -126,7 +126,7 @@ class TestContactsShow:
         assert "No interactions yet" in result.output
 
     def test_shows_interactions(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_contact.return_value = SAMPLE_CONTACT
             mock_crm.get_interactions.return_value = [SAMPLE_INTERACTION]
             result = runner.invoke(cli, ["contacts", "show", "1"])
@@ -138,7 +138,7 @@ class TestContactsShow:
             method='email', direction='outbound', summary='Follow-up sent',
             outcome='interested', next_action='Call back', next_action_date=date(2026, 2, 1),
         )
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_contact.return_value = SAMPLE_CONTACT
             mock_crm.get_interactions.return_value = [interaction]
             result = runner.invoke(cli, ["contacts", "show", "1"])
@@ -146,7 +146,7 @@ class TestContactsShow:
 
     def test_contact_with_notes(self, runner):
         contact = Contact(id=1, name='Test', status='cold', preferred_language='de', notes='Great gallery')
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_contact.return_value = contact
             mock_crm.get_interactions.return_value = []
             result = runner.invoke(cli, ["contacts", "show", "1"])
@@ -160,14 +160,14 @@ class TestContactsShow:
 class TestContactsEdit:
 
     def test_no_options_prints_error(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             result = runner.invoke(cli, ["contacts", "edit", "1"])
         assert result.exit_code == 0
         assert "No updates specified" in result.output
         mock_crm.update_contact.assert_not_called()
 
     def test_updates_status(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.update_contact.return_value = True
             result = runner.invoke(cli, ["contacts", "edit", "1", "--status", "contacted"])
         assert result.exit_code == 0
@@ -175,13 +175,13 @@ class TestContactsEdit:
         mock_crm.update_contact.assert_called_once_with(1, {"status": "contacted"})
 
     def test_not_found(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.update_contact.return_value = False
             result = runner.invoke(cli, ["contacts", "edit", "1", "--status", "contacted"])
         assert "not found" in result.output
 
     def test_multiple_fields(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.update_contact.return_value = True
             runner.invoke(cli, [
                 "contacts", "edit", "1",
@@ -205,7 +205,7 @@ class TestContactsAdd:
     def test_creates_contact(self, runner):
         # Prompts: name, type, subtype, city, country, website, email, language, notes
         inputs = "Neue Galerie\n\n\nMunchen\n\n\n\n\n\n"
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.create_contact.return_value = 42
             result = runner.invoke(cli, ["contacts", "add"], input=inputs)
         assert result.exit_code == 0
@@ -214,7 +214,7 @@ class TestContactsAdd:
 
     def test_create_contact_called_with_correct_name(self, runner):
         inputs = "My Gallery\n\n\n\n\n\n\n\n\n"
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.create_contact.return_value = 1
             runner.invoke(cli, ["contacts", "add"], input=inputs)
         contact_arg = mock_crm.create_contact.call_args[0][0]
@@ -229,7 +229,7 @@ class TestContactsAdd:
 class TestContactsLog:
 
     def test_contact_not_found(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_contact.return_value = None
             result = runner.invoke(cli, ["contacts", "log", "99"])
         assert result.exit_code == 0
@@ -238,7 +238,7 @@ class TestContactsLog:
     def test_logs_interaction(self, runner):
         # Prompts: date (accept default), method, direction, summary, outcome, next_action (empty)
         inputs = "\n\n\nSent intro\n\n\n"
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_contact.return_value = SAMPLE_CONTACT
             mock_crm.log_interaction.return_value = 10
             result = runner.invoke(cli, ["contacts", "log", "1"], input=inputs)
@@ -248,7 +248,7 @@ class TestContactsLog:
     def test_interaction_with_next_action(self, runner):
         # Prompts: date, method, direction, summary, outcome, next_action, days_ahead
         inputs = "\n\n\nSent intro\n\nCall back\n30\n"
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_contact.return_value = SAMPLE_CONTACT
             mock_crm.log_interaction.return_value = 11
             result = runner.invoke(cli, ["contacts", "log", "1"], input=inputs)
@@ -264,14 +264,14 @@ class TestContactsLog:
 class TestShowsList:
 
     def test_empty_result(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_shows.return_value = []
             result = runner.invoke(cli, ["shows", "list"])
         assert result.exit_code == 0
         assert "No shows found" in result.output
 
     def test_lists_shows(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_shows.return_value = [SAMPLE_SHOW]
             result = runner.invoke(cli, ["shows", "list"])
         assert result.exit_code == 0
@@ -279,27 +279,27 @@ class TestShowsList:
 
     def test_show_without_date(self, runner):
         show = Show(id=6, name='Untitled Show', status='possible')
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_shows.return_value = [show]
             result = runner.invoke(cli, ["shows", "list"])
         assert "no date" in result.output
 
     def test_upcoming_flag_filters_by_today(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_shows.return_value = []
             runner.invoke(cli, ["shows", "list", "--upcoming"])
         _, kwargs = mock_crm.get_shows.call_args
         assert kwargs["date_from"] == date.today()
 
     def test_no_upcoming_flag_passes_none(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_shows.return_value = []
             runner.invoke(cli, ["shows", "list"])
         _, kwargs = mock_crm.get_shows.call_args
         assert kwargs["date_from"] is None
 
     def test_status_filter_passed_through(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_shows.return_value = []
             runner.invoke(cli, ["shows", "list", "--status", "confirmed"])
         _, kwargs = mock_crm.get_shows.call_args
@@ -315,7 +315,7 @@ class TestShowsAdd:
     def test_creates_show(self, runner):
         # Prompts: name, city, start_date, end_date, theme, status, notes
         inputs = "Fruhjahrsschau\nMunchen\n\n\n\n\n\n"
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.create_show.return_value = 5
             result = runner.invoke(cli, ["shows", "add"], input=inputs)
         assert result.exit_code == 0
@@ -324,7 +324,7 @@ class TestShowsAdd:
 
     def test_show_created_with_correct_name(self, runner):
         inputs = "My Show\n\n\n\n\n\n\n"
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.create_show.return_value = 1
             runner.invoke(cli, ["shows", "add"], input=inputs)
         show_arg = mock_crm.create_show.call_args[0][0]
@@ -338,14 +338,14 @@ class TestShowsAdd:
 class TestOverdue:
 
     def test_no_overdue(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_overdue_contacts.return_value = []
             result = runner.invoke(cli, ["overdue"])
         assert result.exit_code == 0
         assert "all caught up" in result.output
 
     def test_lists_overdue_contacts(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_overdue_contacts.return_value = [SAMPLE_CONTACT]
             result = runner.invoke(cli, ["overdue"])
         assert result.exit_code == 0
@@ -360,14 +360,14 @@ class TestOverdue:
 class TestDormant:
 
     def test_no_dormant(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_dormant_contacts.return_value = []
             result = runner.invoke(cli, ["dormant"])
         assert result.exit_code == 0
         assert "No dormant contacts" in result.output
 
     def test_lists_dormant_contacts(self, runner):
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_dormant_contacts.return_value = [SAMPLE_CONTACT]
             result = runner.invoke(cli, ["dormant"])
         assert result.exit_code == 0
@@ -378,7 +378,7 @@ class TestDormant:
             Contact(id=i, name=f"Gallery {i}", type='gallery', status='cold', preferred_language='de')
             for i in range(25)
         ]
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_dormant_contacts.return_value = contacts
             result = runner.invoke(cli, ["dormant"])
         assert "and 5 more" in result.output
@@ -388,7 +388,7 @@ class TestDormant:
             Contact(id=i, name=f"Gallery {i}", type='gallery', status='cold', preferred_language='de')
             for i in range(20)
         ]
-        with patch("artcrm.cli.main.crm") as mock_crm:
+        with patch("src.cli.main.crm") as mock_crm:
             mock_crm.get_dormant_contacts.return_value = contacts
             result = runner.invoke(cli, ["dormant"])
         assert "more" not in result.output
@@ -401,14 +401,14 @@ class TestDormant:
 class TestBrief:
 
     def test_success(self, runner):
-        with patch("artcrm.engine.ai_planner.generate_daily_brief") as mock_brief:
+        with patch("src.engine.ai_planner.generate_daily_brief") as mock_brief:
             mock_brief.return_value = "Contact Galerie Stern this week."
             result = runner.invoke(cli, ["brief"])
         assert result.exit_code == 0
         assert "Contact Galerie Stern this week." in result.output
 
     def test_exception_handled_gracefully(self, runner):
-        with patch("artcrm.engine.ai_planner.generate_daily_brief") as mock_brief:
+        with patch("src.engine.ai_planner.generate_daily_brief") as mock_brief:
             mock_brief.side_effect = Exception("Ollama not running")
             result = runner.invoke(cli, ["brief"])
         assert result.exit_code == 0
@@ -427,7 +427,7 @@ class TestScore:
             "reasoning": "Good match for abstract work.",
             "suggested_approach": "Send email first.",
         }
-        with patch("artcrm.engine.ai_planner.score_contact_fit") as mock_score:
+        with patch("src.engine.ai_planner.score_contact_fit") as mock_score:
             mock_score.return_value = mock_result
             result = runner.invoke(cli, ["score", "1"])
         assert result.exit_code == 0
@@ -436,13 +436,13 @@ class TestScore:
 
     def test_passes_contact_id(self, runner):
         mock_result = {"fit_score": 50, "reasoning": "OK", "suggested_approach": "Try"}
-        with patch("artcrm.engine.ai_planner.score_contact_fit") as mock_score:
+        with patch("src.engine.ai_planner.score_contact_fit") as mock_score:
             mock_score.return_value = mock_result
             runner.invoke(cli, ["score", "42"])
         mock_score.assert_called_once_with(42, model='deepseek-chat')
 
     def test_exception_handled_gracefully(self, runner):
-        with patch("artcrm.engine.ai_planner.score_contact_fit") as mock_score:
+        with patch("src.engine.ai_planner.score_contact_fit") as mock_score:
             mock_score.side_effect = Exception("AI error")
             result = runner.invoke(cli, ["score", "1"])
         assert result.exit_code == 0
@@ -457,26 +457,26 @@ class TestSuggest:
 
     def test_success(self, runner):
         suggestions = [{"contact": SAMPLE_CONTACT}]
-        with patch("artcrm.engine.ai_planner.suggest_next_contacts") as mock_suggest:
+        with patch("src.engine.ai_planner.suggest_next_contacts") as mock_suggest:
             mock_suggest.return_value = suggestions
             result = runner.invoke(cli, ["suggest"])
         assert result.exit_code == 0
         assert "Galerie Stern" in result.output
 
     def test_default_limit_is_5(self, runner):
-        with patch("artcrm.engine.ai_planner.suggest_next_contacts") as mock_suggest:
+        with patch("src.engine.ai_planner.suggest_next_contacts") as mock_suggest:
             mock_suggest.return_value = []
             runner.invoke(cli, ["suggest"])
         mock_suggest.assert_called_once_with(limit=5, model='deepseek-chat')
 
     def test_custom_limit(self, runner):
-        with patch("artcrm.engine.ai_planner.suggest_next_contacts") as mock_suggest:
+        with patch("src.engine.ai_planner.suggest_next_contacts") as mock_suggest:
             mock_suggest.return_value = []
             runner.invoke(cli, ["suggest", "--limit", "10"])
         mock_suggest.assert_called_once_with(limit=10, model='deepseek-chat')
 
     def test_exception_handled_gracefully(self, runner):
-        with patch("artcrm.engine.ai_planner.suggest_next_contacts") as mock_suggest:
+        with patch("src.engine.ai_planner.suggest_next_contacts") as mock_suggest:
             mock_suggest.side_effect = Exception("AI unavailable")
             result = runner.invoke(cli, ["suggest"])
         assert result.exit_code == 0
@@ -498,7 +498,7 @@ class TestDraft:
     }
 
     def test_success(self, runner):
-        with patch("artcrm.engine.email_composer.draft_first_contact_letter") as mock_draft:
+        with patch("src.engine.email_composer.draft_first_contact_letter") as mock_draft:
             mock_draft.return_value = self.DRAFT_RESULT
             result = runner.invoke(cli, ["draft", "1"])
         assert result.exit_code == 0
@@ -506,7 +506,7 @@ class TestDraft:
         assert "Vorstellung" in result.output
 
     def test_passes_contact_id_and_options(self, runner):
-        with patch("artcrm.engine.email_composer.draft_first_contact_letter") as mock_draft:
+        with patch("src.engine.email_composer.draft_first_contact_letter") as mock_draft:
             mock_draft.return_value = self.DRAFT_RESULT
             runner.invoke(cli, ["draft", "42", "--language", "en", "--no-portfolio"])
         mock_draft.assert_called_once_with(
@@ -514,14 +514,14 @@ class TestDraft:
         )
 
     def test_value_error_handled(self, runner):
-        with patch("artcrm.engine.email_composer.draft_first_contact_letter") as mock_draft:
+        with patch("src.engine.email_composer.draft_first_contact_letter") as mock_draft:
             mock_draft.side_effect = ValueError("Contact not found")
             result = runner.invoke(cli, ["draft", "1"])
         assert result.exit_code == 0
         assert "Error" in result.output
 
     def test_runtime_error_handled(self, runner):
-        with patch("artcrm.engine.email_composer.draft_first_contact_letter") as mock_draft:
+        with patch("src.engine.email_composer.draft_first_contact_letter") as mock_draft:
             mock_draft.side_effect = RuntimeError("API key missing")
             result = runner.invoke(cli, ["draft", "1"])
         assert result.exit_code == 0
@@ -544,7 +544,7 @@ class TestFollowup:
     }
 
     def test_success(self, runner):
-        with patch("artcrm.engine.email_composer.draft_follow_up_letter") as mock_followup:
+        with patch("src.engine.email_composer.draft_follow_up_letter") as mock_followup:
             mock_followup.return_value = self.FOLLOWUP_RESULT
             result = runner.invoke(cli, ["followup", "1"], input="Hatte gutes Gesprach\n")
         assert result.exit_code == 0
@@ -552,21 +552,21 @@ class TestFollowup:
         assert "Nachfrage" in result.output
 
     def test_passes_summary_to_composer(self, runner):
-        with patch("artcrm.engine.email_composer.draft_follow_up_letter") as mock_followup:
+        with patch("src.engine.email_composer.draft_follow_up_letter") as mock_followup:
             mock_followup.return_value = self.FOLLOWUP_RESULT
             runner.invoke(cli, ["followup", "1"], input="My summary\n")
         _, kwargs = mock_followup.call_args
         assert kwargs["previous_interaction_summary"] == "My summary"
 
     def test_value_error_handled(self, runner):
-        with patch("artcrm.engine.email_composer.draft_follow_up_letter") as mock_followup:
+        with patch("src.engine.email_composer.draft_follow_up_letter") as mock_followup:
             mock_followup.side_effect = ValueError("No interactions found")
             result = runner.invoke(cli, ["followup", "1"], input="summary\n")
         assert result.exit_code == 0
         assert "Error" in result.output
 
     def test_runtime_error_handled(self, runner):
-        with patch("artcrm.engine.email_composer.draft_follow_up_letter") as mock_followup:
+        with patch("src.engine.email_composer.draft_follow_up_letter") as mock_followup:
             mock_followup.side_effect = RuntimeError("API error")
             result = runner.invoke(cli, ["followup", "1"], input="summary\n")
         assert result.exit_code == 0
@@ -590,7 +590,7 @@ class TestRecon:
     }
 
     def test_success(self, runner):
-        with patch("artcrm.engine.lead_scout.scout_city") as mock_scout:
+        with patch("src.engine.lead_scout.scout_city") as mock_scout:
             mock_scout.return_value = self.SCOUT_STATS
             result = runner.invoke(cli, ["recon", "Munchen"])
         assert result.exit_code == 0
@@ -598,7 +598,7 @@ class TestRecon:
         assert "Munchen" in result.output
 
     def test_displays_stats(self, runner):
-        with patch("artcrm.engine.lead_scout.scout_city") as mock_scout:
+        with patch("src.engine.lead_scout.scout_city") as mock_scout:
             mock_scout.return_value = self.SCOUT_STATS
             result = runner.invoke(cli, ["recon", "Munchen"])
         assert "10" in result.output  # total_found
@@ -606,41 +606,41 @@ class TestRecon:
         assert "2" in result.output   # total_skipped
 
     def test_default_types_passed(self, runner):
-        with patch("artcrm.engine.lead_scout.scout_city") as mock_scout:
+        with patch("src.engine.lead_scout.scout_city") as mock_scout:
             mock_scout.return_value = self.SCOUT_STATS
             runner.invoke(cli, ["recon", "Munchen"])
         _, kwargs = mock_scout.call_args
         assert set(kwargs["business_types"]) == {"gallery", "cafe", "coworking"}
 
     def test_custom_type_passed(self, runner):
-        with patch("artcrm.engine.lead_scout.scout_city") as mock_scout:
+        with patch("src.engine.lead_scout.scout_city") as mock_scout:
             mock_scout.return_value = self.SCOUT_STATS
             runner.invoke(cli, ["recon", "Munchen", "--type", "gallery"])
         _, kwargs = mock_scout.call_args
         assert kwargs["business_types"] == ["gallery"]
 
     def test_unknown_type_prints_warning(self, runner):
-        with patch("artcrm.engine.lead_scout.scout_city") as mock_scout:
+        with patch("src.engine.lead_scout.scout_city") as mock_scout:
             mock_scout.return_value = self.SCOUT_STATS
             result = runner.invoke(cli, ["recon", "Munchen", "--type", "museum"])
         assert "Warning" in result.output or "Unknown type" in result.output
 
     def test_all_sources_disabled_exits_early(self, runner):
-        with patch("artcrm.engine.lead_scout.scout_city") as mock_scout:
+        with patch("src.engine.lead_scout.scout_city") as mock_scout:
             result = runner.invoke(cli, ["recon", "Munchen", "--no-google", "--no-osm"])
         assert result.exit_code == 0
         assert "All data sources disabled" in result.output
         mock_scout.assert_not_called()
 
     def test_radius_passed_through(self, runner):
-        with patch("artcrm.engine.lead_scout.scout_city") as mock_scout:
+        with patch("src.engine.lead_scout.scout_city") as mock_scout:
             mock_scout.return_value = self.SCOUT_STATS
             runner.invoke(cli, ["recon", "Munchen", "--radius", "5"])
         _, kwargs = mock_scout.call_args
         assert kwargs["radius_km"] == 5.0
 
     def test_country_argument(self, runner):
-        with patch("artcrm.engine.lead_scout.scout_city") as mock_scout:
+        with patch("src.engine.lead_scout.scout_city") as mock_scout:
             mock_scout.return_value = self.SCOUT_STATS
             runner.invoke(cli, ["recon", "Wien", "AT"])
         _, kwargs = mock_scout.call_args
@@ -654,27 +654,27 @@ class TestRecon:
 class TestPromptDate:
 
     def test_valid_date_returned(self):
-        with patch("artcrm.cli.main.click.prompt", return_value="2026-03-15"), \
-             patch("artcrm.cli.main.click.echo"):
+        with patch("src.cli.main.click.prompt", return_value="2026-03-15"), \
+             patch("src.cli.main.click.echo"):
             result = _prompt_date("Date")
         assert result == date(2026, 3, 15)
 
     def test_empty_input_returns_none(self):
-        with patch("artcrm.cli.main.click.prompt", return_value=""), \
-             patch("artcrm.cli.main.click.echo"):
+        with patch("src.cli.main.click.prompt", return_value=""), \
+             patch("src.cli.main.click.echo"):
             result = _prompt_date("Date")
         assert result is None
 
     def test_invalid_then_valid_retries(self):
-        with patch("artcrm.cli.main.click.prompt", side_effect=["not-a-date", "2026-06-01"]), \
-             patch("artcrm.cli.main.click.echo"):
+        with patch("src.cli.main.click.prompt", side_effect=["not-a-date", "2026-06-01"]), \
+             patch("src.cli.main.click.echo"):
             result = _prompt_date("Date")
         assert result == date(2026, 6, 1)
 
     def test_default_shown_when_provided(self):
         default = date(2026, 1, 1)
-        with patch("artcrm.cli.main.click.prompt", return_value=str(default)) as mock_prompt, \
-             patch("artcrm.cli.main.click.echo"):
+        with patch("src.cli.main.click.prompt", return_value=str(default)) as mock_prompt, \
+             patch("src.cli.main.click.echo"):
             _prompt_date("Date", default=default)
         _, kwargs = mock_prompt.call_args
         assert kwargs.get("default") == "2026-01-01"
@@ -687,20 +687,20 @@ class TestPromptDate:
 class TestPromptEmail:
 
     def test_valid_email_returned(self):
-        with patch("artcrm.cli.main.click.prompt", return_value="test@example.com"), \
-             patch("artcrm.cli.main.click.echo"):
+        with patch("src.cli.main.click.prompt", return_value="test@example.com"), \
+             patch("src.cli.main.click.echo"):
             result = _prompt_email()
         assert result == "test@example.com"
 
     def test_empty_input_returns_none(self):
-        with patch("artcrm.cli.main.click.prompt", return_value=""), \
-             patch("artcrm.cli.main.click.echo"):
+        with patch("src.cli.main.click.prompt", return_value=""), \
+             patch("src.cli.main.click.echo"):
             result = _prompt_email()
         assert result is None
 
     def test_invalid_then_valid_retries(self):
-        with patch("artcrm.cli.main.click.prompt", side_effect=["not-an-email", "valid@example.com"]), \
-             patch("artcrm.cli.main.click.echo"):
+        with patch("src.cli.main.click.prompt", side_effect=["not-an-email", "valid@example.com"]), \
+             patch("src.cli.main.click.echo"):
             result = _prompt_email()
         assert result == "valid@example.com"
 
@@ -711,15 +711,15 @@ class TestPromptEmail:
             "a@b.de",
         ]
         for email in valid_emails:
-            with patch("artcrm.cli.main.click.prompt", return_value=email), \
-                 patch("artcrm.cli.main.click.echo"):
+            with patch("src.cli.main.click.prompt", return_value=email), \
+                 patch("src.cli.main.click.echo"):
                 result = _prompt_email()
             assert result == email
 
     def test_invalid_formats_rejected(self):
         invalid_inputs = ["not-an-email", "missing@tld", "@nodomain.com"]
         for bad in invalid_inputs:
-            with patch("artcrm.cli.main.click.prompt", side_effect=[bad, "good@example.com"]), \
-                 patch("artcrm.cli.main.click.echo") as mock_echo:
+            with patch("src.cli.main.click.prompt", side_effect=[bad, "good@example.com"]), \
+                 patch("src.cli.main.click.echo") as mock_echo:
                 _prompt_email()
             mock_echo.assert_called()  # error message was shown

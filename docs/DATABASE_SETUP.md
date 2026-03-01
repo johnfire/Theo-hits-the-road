@@ -91,14 +91,14 @@ pip install psycopg2-binary python-dotenv
 
 ## Running Migrations
 
-Migrations are SQL files in `artcrm/db/migrations/` directory. They must be run in order.
+Migrations are SQL files in `src/db/migrations/` directory. They must be run in order.
 
 ### Manual Migration (Phase 1)
 
 ```bash
 # Run each migration file in order
-psql -U artcrm_admindude -d artcrm -h localhost -f artcrm/db/migrations/001_initial_schema.sql
-psql -U artcrm_admindude -d artcrm -h localhost -f artcrm/db/migrations/002_seed_lookup_values.sql
+psql -U artcrm_admindude -d artcrm -h localhost -f src/db/migrations/001_initial_schema.sql
+psql -U artcrm_admindude -d artcrm -h localhost -f src/db/migrations/002_seed_lookup_values.sql
 ```
 
 ### Verify Setup

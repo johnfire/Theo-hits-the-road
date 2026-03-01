@@ -1,11 +1,11 @@
 """
-Unit tests for data models (artcrm/models/__init__.py).
+Unit tests for data models (src/models/__init__.py).
 Pure Python — no DB, no mocking required.
 """
 
 from datetime import date, datetime
 import pytest
-from artcrm.models import Contact, Interaction, Show
+from src.models import Contact, Interaction, Show
 
 
 # ---------------------------------------------------------------------------

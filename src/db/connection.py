@@ -8,7 +8,7 @@ from psycopg2.extras import RealDictCursor
 from contextlib import contextmanager
 import logging
 
-from artcrm.config import config
+from src.config import config
 
 logger = logging.getLogger(__name__)
 

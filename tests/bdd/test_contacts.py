@@ -1,6 +1,6 @@
 from pytest_bdd import scenarios, given, when, parsers
-from artcrm.cli.main import cli
-from artcrm.models import Contact
+from src.cli.main import cli
+from src.models import Contact
 
 scenarios("features/contacts.feature")
 

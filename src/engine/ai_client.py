@@ -9,7 +9,7 @@ from typing import Optional
 import requests
 from anthropic import Anthropic
 
-from artcrm.config import config
+from src.config import config
 
 logger = logging.getLogger(__name__)
 

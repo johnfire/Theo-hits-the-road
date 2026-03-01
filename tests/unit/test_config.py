@@ -1,5 +1,5 @@
 """
-Unit tests for application configuration (artcrm/config.py).
+Unit tests for application configuration (src/config.py).
 
 Config is a class with attributes set at class-body parse time, and a module-level
 singleton created immediately after. Testing different env var states requires
@@ -15,29 +15,29 @@ from unittest.mock import patch
 
 
 # ---------------------------------------------------------------------------
-# Helper: reload artcrm.config with a controlled environment
+# Helper: reload src.config with a controlled environment
 # ---------------------------------------------------------------------------
 
 def _reload_config(env_overrides: dict):
     """
-    Reload artcrm.config with a specific set of environment variables.
+    Reload src.config with a specific set of environment variables.
     load_dotenv is patched to a no-op so the real .env file is ignored.
     Always restores the original module in sys.modules afterward.
     Returns the reloaded module.
     """
-    original = sys.modules.get('artcrm.config')
+    original = sys.modules.get('src.config')
     try:
         with patch.dict('os.environ', env_overrides, clear=True), \
              patch('dotenv.load_dotenv'):
-            sys.modules.pop('artcrm.config', None)
-            module = importlib.import_module('artcrm.config')
+            sys.modules.pop('src.config', None)
+            module = importlib.import_module('src.config')
             return module
     finally:
         # Restore the original module so other tests are unaffected.
         if original is not None:
-            sys.modules['artcrm.config'] = original
-        elif 'artcrm.config' in sys.modules:
-            del sys.modules['artcrm.config']
+            sys.modules['src.config'] = original
+        elif 'src.config' in sys.modules:
+            del sys.modules['src.config']
 
 
 # ---------------------------------------------------------------------------

@@ -1,10 +1,10 @@
 """
-Unit tests for the CRM Engine (artcrm/engine/crm.py).
+Unit tests for the CRM Engine (src/engine/crm.py).
 
-Strategy: patch artcrm.engine.crm.get_db_cursor with a contextmanager that yields
+Strategy: patch src.engine.crm.get_db_cursor with a contextmanager that yields
 a MagicMock cursor. Rows returned by the cursor are plain dicts, which unpack
 cleanly into Contact / Interaction / Show dataclasses. Bus events are verified by
-patching artcrm.engine.crm.bus.emit.
+patching src.engine.crm.bus.emit.
 """
 
 import pytest
@@ -12,8 +12,8 @@ from contextlib import contextmanager
 from datetime import date, datetime
 from unittest.mock import MagicMock, patch, call
 
-from artcrm.models import Contact, Interaction, Show
-from artcrm.engine.crm import (
+from src.models import Contact, Interaction, Show
+from src.engine.crm import (
     _validate_columns,
     _CONTACT_COLUMNS,
     _SHOW_COLUMNS,
@@ -30,7 +30,7 @@ from artcrm.engine.crm import (
     get_shows,
     update_show,
 )
-from artcrm.bus.events import (
+from src.bus.events import (
     EVENT_CONTACT_CREATED, EVENT_CONTACT_UPDATED, EVENT_CONTACT_DELETED,
     EVENT_INTERACTION_LOGGED, EVENT_SHOW_CREATED, EVENT_SHOW_UPDATED,
 )
@@ -80,7 +80,7 @@ def cursor_patch(cur):
     def _mock_ctx():
         yield cur
 
-    return patch('artcrm.engine.crm.get_db_cursor', _mock_ctx)
+    return patch('src.engine.crm.get_db_cursor', _mock_ctx)
 
 
 # ---------------------------------------------------------------------------
@@ -128,7 +128,7 @@ def test_create_contact_executes_insert():
 def test_create_contact_emits_event():
     contact = Contact(name='Galerie Stern')
     cur = make_cursor(fetchone={'id': 7})
-    with cursor_patch(cur), patch('artcrm.engine.crm.bus.emit') as mock_emit:
+    with cursor_patch(cur), patch('src.engine.crm.bus.emit') as mock_emit:
         create_contact(contact)
     mock_emit.assert_called_once_with(EVENT_CONTACT_CREATED, {'contact_id': 7, 'contact': contact})
 
@@ -159,7 +159,7 @@ def test_get_contact_not_found_returns_none():
 
 def test_update_contact_empty_dict_returns_false():
     # No DB call should be made
-    with patch('artcrm.engine.crm.get_db_cursor') as mock_ctx:
+    with patch('src.engine.crm.get_db_cursor') as mock_ctx:
         result = update_contact(1, {})
     assert result is False
     mock_ctx.assert_not_called()
@@ -172,7 +172,7 @@ def test_update_contact_invalid_column_raises():
 
 def test_update_contact_success_returns_true():
     cur = make_cursor(rowcount=1)
-    with cursor_patch(cur), patch('artcrm.engine.crm.bus.emit'):
+    with cursor_patch(cur), patch('src.engine.crm.bus.emit'):
         result = update_contact(1, {'status': 'warm'})
     assert result is True
 
@@ -186,7 +186,7 @@ def test_update_contact_not_found_returns_false():
 
 def test_update_contact_emits_event():
     cur = make_cursor(rowcount=1)
-    with cursor_patch(cur), patch('artcrm.engine.crm.bus.emit') as mock_emit:
+    with cursor_patch(cur), patch('src.engine.crm.bus.emit') as mock_emit:
         update_contact(1, {'status': 'warm'})
     assert mock_emit.called
     event_name = mock_emit.call_args[0][0]
@@ -195,7 +195,7 @@ def test_update_contact_emits_event():
 
 def test_update_contact_no_event_when_not_found():
     cur = make_cursor(rowcount=0)
-    with cursor_patch(cur), patch('artcrm.engine.crm.bus.emit') as mock_emit:
+    with cursor_patch(cur), patch('src.engine.crm.bus.emit') as mock_emit:
         update_contact(1, {'status': 'warm'})
     mock_emit.assert_not_called()
 
@@ -206,14 +206,14 @@ def test_update_contact_no_event_when_not_found():
 
 def test_delete_contact_soft_returns_true():
     cur = make_cursor(rowcount=1)
-    with cursor_patch(cur), patch('artcrm.engine.crm.bus.emit'):
+    with cursor_patch(cur), patch('src.engine.crm.bus.emit'):
         result = delete_contact(1, soft=True)
     assert result is True
 
 
 def test_delete_contact_soft_uses_update_sql():
     cur = make_cursor(rowcount=1)
-    with cursor_patch(cur), patch('artcrm.engine.crm.bus.emit'):
+    with cursor_patch(cur), patch('src.engine.crm.bus.emit'):
         delete_contact(1, soft=True)
     sql = cur.execute.call_args[0][0]
     assert 'deleted_at' in sql
@@ -222,7 +222,7 @@ def test_delete_contact_soft_uses_update_sql():
 
 def test_delete_contact_hard_uses_delete_sql():
     cur = make_cursor(rowcount=1)
-    with cursor_patch(cur), patch('artcrm.engine.crm.bus.emit'):
+    with cursor_patch(cur), patch('src.engine.crm.bus.emit'):
         delete_contact(1, soft=False)
     sql = cur.execute.call_args[0][0]
     assert 'DELETE FROM contacts' in sql
@@ -237,7 +237,7 @@ def test_delete_contact_not_found_returns_false():
 
 def test_delete_contact_emits_event():
     cur = make_cursor(rowcount=1)
-    with cursor_patch(cur), patch('artcrm.engine.crm.bus.emit') as mock_emit:
+    with cursor_patch(cur), patch('src.engine.crm.bus.emit') as mock_emit:
         delete_contact(1)
     mock_emit.assert_called_once_with(
         EVENT_CONTACT_DELETED, {'contact_id': 1, 'soft': True}
@@ -347,7 +347,7 @@ def test_log_interaction_executes_insert():
 def test_log_interaction_emits_event():
     interaction = Interaction(contact_id=5)
     cur = make_cursor(fetchone={'id': 99})
-    with cursor_patch(cur), patch('artcrm.engine.crm.bus.emit') as mock_emit:
+    with cursor_patch(cur), patch('src.engine.crm.bus.emit') as mock_emit:
         log_interaction(interaction)
     mock_emit.assert_called_once_with(
         EVENT_INTERACTION_LOGGED,
@@ -397,7 +397,7 @@ def test_create_show_executes_insert():
 def test_create_show_emits_event():
     show = Show(name='Ausstellung')
     cur = make_cursor(fetchone={'id': 5})
-    with cursor_patch(cur), patch('artcrm.engine.crm.bus.emit') as mock_emit:
+    with cursor_patch(cur), patch('src.engine.crm.bus.emit') as mock_emit:
         create_show(show)
     mock_emit.assert_called_once_with(EVENT_SHOW_CREATED, {'show_id': 5, 'show': show})
 
@@ -436,7 +436,7 @@ def test_get_shows_date_range_filter():
 # ---------------------------------------------------------------------------
 
 def test_update_show_empty_dict_returns_false():
-    with patch('artcrm.engine.crm.get_db_cursor') as mock_ctx:
+    with patch('src.engine.crm.get_db_cursor') as mock_ctx:
         result = update_show(1, {})
     assert result is False
     mock_ctx.assert_not_called()
@@ -449,7 +449,7 @@ def test_update_show_invalid_column_raises():
 
 def test_update_show_success_returns_true():
     cur = make_cursor(rowcount=1)
-    with cursor_patch(cur), patch('artcrm.engine.crm.bus.emit'):
+    with cursor_patch(cur), patch('src.engine.crm.bus.emit'):
         result = update_show(1, {'status': 'confirmed'})
     assert result is True
 
@@ -463,7 +463,7 @@ def test_update_show_not_found_returns_false():
 
 def test_update_show_emits_event():
     cur = make_cursor(rowcount=1)
-    with cursor_patch(cur), patch('artcrm.engine.crm.bus.emit') as mock_emit:
+    with cursor_patch(cur), patch('src.engine.crm.bus.emit') as mock_emit:
         update_show(1, {'status': 'confirmed'})
     event_name = mock_emit.call_args[0][0]
     assert event_name == EVENT_SHOW_UPDATED

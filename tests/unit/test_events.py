@@ -1,10 +1,10 @@
 """
-Unit tests for the EventBus (artcrm/bus/events.py).
+Unit tests for the EventBus (src/bus/events.py).
 No mocking required — pure Python.
 """
 
 import pytest
-from artcrm.bus.events import (
+from src.bus.events import (
     EventBus,
     EVENT_CONTACT_CREATED, EVENT_CONTACT_UPDATED, EVENT_CONTACT_DELETED,
     EVENT_INTERACTION_LOGGED, EVENT_SHOW_CREATED, EVENT_SHOW_UPDATED,

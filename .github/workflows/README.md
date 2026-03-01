@@ -38,8 +38,8 @@ To test the same setup locally:
 createdb artcrm_test
 
 # Run migrations
-psql -d artcrm_test -f artcrm/db/migrations/001_initial_schema.sql
-psql -d artcrm_test -f artcrm/db/migrations/002_seed_lookup_values.sql
+psql -d artcrm_test -f src/db/migrations/001_initial_schema.sql
+psql -d artcrm_test -f src/db/migrations/002_seed_lookup_values.sql
 
 # Run tests
 DATABASE_URL=postgresql://yourusername@localhost/artcrm_test python scripts/test_crm.py

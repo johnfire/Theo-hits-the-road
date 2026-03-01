@@ -1,7 +1,7 @@
 from unittest.mock import patch
 from pytest_bdd import scenarios, given, when
-from artcrm.cli.main import cli
-from artcrm.models import Contact
+from src.cli.main import cli
+from src.models import Contact
 
 scenarios("features/outreach.feature")
 
@@ -45,6 +45,6 @@ def check_dormant(runner, context):
 @when("the artist requests the daily brief")
 def request_brief(runner, context):
     brief_text = context.get("brief_text", "Contact Galerie Stern this week.")
-    with patch("artcrm.engine.ai_planner.generate_daily_brief") as mock_brief:
+    with patch("src.engine.ai_planner.generate_daily_brief") as mock_brief:
         mock_brief.return_value = brief_text
         context["result"] = runner.invoke(cli, ["brief"])

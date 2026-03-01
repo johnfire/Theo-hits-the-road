@@ -21,9 +21,9 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # Run database migrations
-psql $DATABASE_URL -f artcrm/db/migrations/001_initial_schema.sql
-psql $DATABASE_URL -f artcrm/db/migrations/002_seed_lookup_values.sql
-psql $DATABASE_URL -f artcrm/db/migrations/003_add_lead_unverified_status.sql
+psql $DATABASE_URL -f src/db/migrations/001_initial_schema.sql
+psql $DATABASE_URL -f src/db/migrations/002_seed_lookup_values.sql
+psql $DATABASE_URL -f src/db/migrations/003_add_lead_unverified_status.sql
 
 # Use the CLI
 ./crm --help
@@ -294,7 +294,7 @@ python -m pytest tests/ -q
 Coverage report:
 
 ```bash
-python -m pytest tests/ --cov=artcrm --cov-report=term-missing
+python -m pytest tests/ --cov=src --cov-report=term-missing
 ```
 
 ### Pre-commit hook
@@ -321,8 +321,8 @@ git commit --no-verify
 ## Project Structure
 
 ```
-artcrm/
-├── artcrm/                    # Main Python package
+src/
+├── src/                    # Main Python package
 │   ├── db/                   # Database migrations
 │   ├── models/               # Data models
 │   ├── engine/               # Business logic

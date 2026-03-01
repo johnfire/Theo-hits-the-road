@@ -1,16 +1,16 @@
 """
 Logging configuration for Art CRM.
 
-Single 'artcrm' logger used across all modules.
+Single 'src' logger used across all modules.
 
-  Log file : ~/logs/artcrm.log
+  Log file : ~/logs/src.log
   Rotation : 5 MB × 3 backups
   Level    : LOG_LEVEL env var (DEBUG / INFO / WARNING / ERROR / CRITICAL)
              defaults to INFO when unset
 
 Usage
 -----
-    from artcrm.logging_config import configure_logging, log_call
+    from src.logging_config import configure_logging, log_call
 
     # Once at startup (idempotent — safe to call multiple times):
     configure_logging()
@@ -35,7 +35,7 @@ import time
 from pathlib import Path
 
 _LOG_DIR = Path.home() / "logs"
-_LOG_FILE = _LOG_DIR / "artcrm.log"
+_LOG_FILE = _LOG_DIR / "src.log"
 _FORMAT = "%(asctime)s | %(levelname)-8s | %(message)s"
 _DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 _MAX_BYTES = 5 * 1024 * 1024  # 5 MB
@@ -44,7 +44,7 @@ _BACKUP_COUNT = 3
 
 def configure_logging() -> logging.Logger:
     """
-    Set up the artcrm logger. Idempotent — safe to call on every CLI entry.
+    Set up the src logger. Idempotent — safe to call on every CLI entry.
     Returns the configured logger.
     """
     _LOG_DIR.mkdir(exist_ok=True)
@@ -52,7 +52,7 @@ def configure_logging() -> logging.Logger:
     level_name = os.environ.get("LOG_LEVEL", "INFO").upper()
     level = getattr(logging, level_name, logging.INFO)
 
-    logger = logging.getLogger("artcrm")
+    logger = logging.getLogger("src")
 
     # Guard: don't add duplicate handlers if already configured
     if logger.handlers:
@@ -82,7 +82,7 @@ def log_call(func):
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        logger = logging.getLogger("artcrm")
+        logger = logging.getLogger("src")
         name = func.__name__
         start = time.perf_counter()
 

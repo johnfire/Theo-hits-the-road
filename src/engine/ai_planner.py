@@ -8,13 +8,13 @@ import logging
 from datetime import date, timedelta
 from typing import List, Dict, Any, Optional
 
-from artcrm.db.connection import get_db_cursor
-from artcrm.logging_config import log_call
-from artcrm.engine import crm
-from artcrm.engine.ai_client import call_ai
-from artcrm.models import Contact, Show
-from artcrm.bus.events import bus, EVENT_ANALYSIS_COMPLETE, EVENT_SUGGESTION_READY
-from artcrm.config import config
+from src.db.connection import get_db_cursor
+from src.logging_config import log_call
+from src.engine import crm
+from src.engine.ai_client import call_ai
+from src.models import Contact, Show
+from src.bus.events import bus, EVENT_ANALYSIS_COMPLETE, EVENT_SUGGESTION_READY
+from src.config import config
 
 logger = logging.getLogger(__name__)
 

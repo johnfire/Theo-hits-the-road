@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, Literal
 from dataclasses import dataclass
 
-from artcrm.logging_config import log_call
+from src.logging_config import log_call
 
 import requests
 from tqdm import tqdm
@@ -26,11 +26,11 @@ except ImportError:
     GOOGLE_MAPS_AVAILABLE = False
     logger.warning("googlemaps library not installed. Google Maps API will not be available.")
 
-from artcrm.engine import crm
-from artcrm.engine.ai_client import call_ai
-from artcrm.models import Contact
-from artcrm.bus.events import bus, EVENT_CONTACT_CREATED
-from artcrm.config import config
+from src.engine import crm
+from src.engine.ai_client import call_ai
+from src.models import Contact
+from src.bus.events import bus, EVENT_CONTACT_CREATED
+from src.config import config
 
 # Scout results storage
 SCOUT_DIR = Path(__file__).parent.parent.parent / "data" / "scout_results"

@@ -9,12 +9,12 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 from pathlib import Path
 
-from artcrm.logging_config import log_call
-from artcrm.engine.ai_client import call_claude, call_ai  # noqa: F401 — call_claude re-exported for tests
-from artcrm.engine import crm
-from artcrm.models import Contact
-from artcrm.bus.events import bus, EVENT_DRAFT_READY
-from artcrm.config import config
+from src.logging_config import log_call
+from src.engine.ai_client import call_claude, call_ai  # noqa: F401 — call_claude re-exported for tests
+from src.engine import crm
+from src.models import Contact
+from src.bus.events import bus, EVENT_DRAFT_READY
+from src.config import config
 
 logger = logging.getLogger(__name__)
 

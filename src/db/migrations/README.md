@@ -30,13 +30,13 @@ For Phase 1, migrations are run manually using `psql`. An automated migration ru
 cd /path/to/theo-hits-the-road
 
 # 2. Run migration 001 - Initial Schema
-psql -U artcrm_admindude -d artcrm -h localhost -f artcrm/db/migrations/001_initial_schema.sql
+psql -U artcrm_admindude -d artcrm -h localhost -f src/db/migrations/001_initial_schema.sql
 
 # You should see:
 # NOTICE:  Migration 001 successful: all tables created
 
 # 3. Run migration 002 - Seed Lookup Values
-psql -U artcrm_admindude -d artcrm -h localhost -f artcrm/db/migrations/002_seed_lookup_values.sql
+psql -U artcrm_admindude -d artcrm -h localhost -f src/db/migrations/002_seed_lookup_values.sql
 
 # You should see:
 # NOTICE:  Category contact_type has 10 values

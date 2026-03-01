@@ -8,11 +8,11 @@ import logging
 from datetime import date, timedelta
 from typing import List, Optional, Dict, Any
 
-from artcrm.db.connection import get_db_cursor
-from artcrm.logging_config import log_call
-from artcrm.models import Contact, Interaction, Show
-from artcrm.bus.events import bus, EVENT_CONTACT_CREATED, EVENT_CONTACT_UPDATED, EVENT_CONTACT_DELETED, EVENT_INTERACTION_LOGGED, EVENT_SHOW_CREATED, EVENT_SHOW_UPDATED
-from artcrm.config import config
+from src.db.connection import get_db_cursor
+from src.logging_config import log_call
+from src.models import Contact, Interaction, Show
+from src.bus.events import bus, EVENT_CONTACT_CREATED, EVENT_CONTACT_UPDATED, EVENT_CONTACT_DELETED, EVENT_INTERACTION_LOGGED, EVENT_SHOW_CREATED, EVENT_SHOW_UPDATED
+from src.config import config
 
 logger = logging.getLogger(__name__)
 

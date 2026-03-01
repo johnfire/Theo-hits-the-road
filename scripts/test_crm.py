@@ -12,8 +12,8 @@ from datetime import date, timedelta
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from artcrm.engine import crm
-from artcrm.models import Contact, Interaction, Show
+from src.engine import crm
+from src.models import Contact, Interaction, Show
 
 def main():
     print("=" * 80)

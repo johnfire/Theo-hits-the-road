@@ -1,13 +1,13 @@
 """
-Unit tests for the Lead Scout (artcrm/engine/lead_scout.py).
+Unit tests for the Lead Scout (src/engine/lead_scout.py).
 
 Mocking strategy:
-- artcrm.engine.lead_scout.GOOGLE_MAPS_AVAILABLE  → bool patch for import guard
-- artcrm.engine.lead_scout.googlemaps             → Google Maps client
+- src.engine.lead_scout.GOOGLE_MAPS_AVAILABLE  → bool patch for import guard
+- src.engine.lead_scout.googlemaps             → Google Maps client
 - requests.post                                   → Overpass HTTP
-- artcrm.engine.lead_scout.call_ai                → AI calls (all models)
-- artcrm.engine.lead_scout.crm.*                  → all DB-touching crm calls
-- artcrm.engine.lead_scout.SCOUT_DIR              → tmp_path
+- src.engine.lead_scout.call_ai                → AI calls (all models)
+- src.engine.lead_scout.crm.*                  → all DB-touching crm calls
+- src.engine.lead_scout.SCOUT_DIR              → tmp_path
 - time.sleep                                      → no-op
 - tqdm                                            → passthrough
 """
@@ -17,8 +17,8 @@ import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch, call
 
-from artcrm.models import Contact
-from artcrm.engine.lead_scout import (
+from src.models import Contact
+from src.engine.lead_scout import (
     LeadCandidate,
     search_google_maps,
     search_openstreetmap,
@@ -114,14 +114,14 @@ def test_lead_candidate_stores_fields():
 # ---------------------------------------------------------------------------
 
 def test_search_google_maps_returns_empty_when_library_unavailable():
-    with patch('artcrm.engine.lead_scout.GOOGLE_MAPS_AVAILABLE', False):
+    with patch('src.engine.lead_scout.GOOGLE_MAPS_AVAILABLE', False):
         result = search_google_maps('Augsburg', 'DE', 'gallery')
     assert result == []
 
 
 def test_search_google_maps_returns_empty_when_no_api_key():
-    with patch('artcrm.engine.lead_scout.GOOGLE_MAPS_AVAILABLE', True), \
-         patch('artcrm.engine.lead_scout.config.GOOGLE_MAPS_API_KEY', ''):
+    with patch('src.engine.lead_scout.GOOGLE_MAPS_AVAILABLE', True), \
+         patch('src.engine.lead_scout.config.GOOGLE_MAPS_API_KEY', ''):
         result = search_google_maps('Augsburg', 'DE', 'gallery')
     assert result == []
 
@@ -139,9 +139,9 @@ def test_search_google_maps_returns_candidates():
     mock_gmaps.places.return_value = {'results': [{'place_id': 'abc123'}]}
     mock_gmaps.place.return_value = {'result': mock_place_details}
 
-    with patch('artcrm.engine.lead_scout.GOOGLE_MAPS_AVAILABLE', True), \
-         patch('artcrm.engine.lead_scout.config.GOOGLE_MAPS_API_KEY', 'key123'), \
-         patch('artcrm.engine.lead_scout.googlemaps.Client', return_value=mock_gmaps), \
+    with patch('src.engine.lead_scout.GOOGLE_MAPS_AVAILABLE', True), \
+         patch('src.engine.lead_scout.config.GOOGLE_MAPS_API_KEY', 'key123'), \
+         patch('src.engine.lead_scout.googlemaps.Client', return_value=mock_gmaps), \
          patch('time.sleep'):
         result = search_google_maps('Augsburg', 'DE', 'gallery')
 
@@ -162,9 +162,9 @@ def test_search_google_maps_skips_permanently_closed():
     mock_gmaps.places.return_value = {'results': [{'place_id': 'xyz'}]}
     mock_gmaps.place.return_value = {'result': mock_place_details}
 
-    with patch('artcrm.engine.lead_scout.GOOGLE_MAPS_AVAILABLE', True), \
-         patch('artcrm.engine.lead_scout.config.GOOGLE_MAPS_API_KEY', 'key'), \
-         patch('artcrm.engine.lead_scout.googlemaps.Client', return_value=mock_gmaps), \
+    with patch('src.engine.lead_scout.GOOGLE_MAPS_AVAILABLE', True), \
+         patch('src.engine.lead_scout.config.GOOGLE_MAPS_API_KEY', 'key'), \
+         patch('src.engine.lead_scout.googlemaps.Client', return_value=mock_gmaps), \
          patch('time.sleep'):
         result = search_google_maps('Augsburg', 'DE', 'gallery')
 
@@ -175,9 +175,9 @@ def test_search_google_maps_returns_empty_on_exception():
     mock_gmaps = MagicMock()
     mock_gmaps.places.side_effect = Exception('API error')
 
-    with patch('artcrm.engine.lead_scout.GOOGLE_MAPS_AVAILABLE', True), \
-         patch('artcrm.engine.lead_scout.config.GOOGLE_MAPS_API_KEY', 'key'), \
-         patch('artcrm.engine.lead_scout.googlemaps.Client', return_value=mock_gmaps), \
+    with patch('src.engine.lead_scout.GOOGLE_MAPS_AVAILABLE', True), \
+         patch('src.engine.lead_scout.config.GOOGLE_MAPS_API_KEY', 'key'), \
+         patch('src.engine.lead_scout.googlemaps.Client', return_value=mock_gmaps), \
          patch('time.sleep'):
         result = search_google_maps('Augsburg', 'DE', 'gallery')
 
@@ -265,21 +265,21 @@ AI_ENRICH_RESPONSE = "SUBTYPE: contemporary\nFIT_SCORE: 80\nCONFIDENCE: 75\nREAS
 
 def test_enrich_with_ai_deepseek_sets_subtype():
     candidate = LeadCandidate(name='Gallery X', type='gallery', city='Augsburg')
-    with patch('artcrm.engine.lead_scout.call_ai', return_value=AI_ENRICH_RESPONSE):
+    with patch('src.engine.lead_scout.call_ai', return_value=AI_ENRICH_RESPONSE):
         result = enrich_with_ai(candidate, model='deepseek-chat')
     assert result.subtype == 'contemporary'
 
 
 def test_enrich_with_ai_claude_calls_call_ai():
     candidate = LeadCandidate(name='Gallery X', type='gallery', city='Augsburg')
-    with patch('artcrm.engine.lead_scout.call_ai', return_value=AI_ENRICH_RESPONSE) as mock_ai:
+    with patch('src.engine.lead_scout.call_ai', return_value=AI_ENRICH_RESPONSE) as mock_ai:
         enrich_with_ai(candidate, model='claude')
     mock_ai.assert_called_once()
 
 
 def test_enrich_with_ai_updates_confidence_score():
     candidate = LeadCandidate(name='Gallery X', type='gallery', city='Augsburg')
-    with patch('artcrm.engine.lead_scout.call_ai', return_value=AI_ENRICH_RESPONSE):
+    with patch('src.engine.lead_scout.call_ai', return_value=AI_ENRICH_RESPONSE):
         result = enrich_with_ai(candidate, model='deepseek-chat')
     assert result.confidence_score == 80
 
@@ -287,14 +287,14 @@ def test_enrich_with_ai_updates_confidence_score():
 def test_enrich_with_ai_clamps_confidence_above_100():
     response = "SUBTYPE: upscale\nFIT_SCORE: 150\nREASONING: Perfect."
     candidate = LeadCandidate(name='Gallery X', type='gallery', city='Augsburg')
-    with patch('artcrm.engine.lead_scout.call_ai', return_value=response):
+    with patch('src.engine.lead_scout.call_ai', return_value=response):
         result = enrich_with_ai(candidate, model='deepseek-chat')
     assert result.confidence_score == 100
 
 
 def test_enrich_with_ai_returns_candidate_unchanged_on_error():
     candidate = LeadCandidate(name='Gallery X', type='gallery', city='Augsburg', confidence_score=50)
-    with patch('artcrm.engine.lead_scout.call_ai', side_effect=RuntimeError('down')):
+    with patch('src.engine.lead_scout.call_ai', side_effect=RuntimeError('down')):
         result = enrich_with_ai(candidate, model='deepseek-chat')
     assert result.confidence_score == 50
     assert result.subtype is None
@@ -303,7 +303,7 @@ def test_enrich_with_ai_returns_candidate_unchanged_on_error():
 def test_enrich_with_ai_skips_unknown_subtype():
     response = "SUBTYPE: unknown\nFIT_SCORE: 60\nREASONING: Unclear."
     candidate = LeadCandidate(name='Gallery X', type='gallery', city='Augsburg')
-    with patch('artcrm.engine.lead_scout.call_ai', return_value=response):
+    with patch('src.engine.lead_scout.call_ai', return_value=response):
         result = enrich_with_ai(candidate, model='deepseek-chat')
     assert result.subtype is None
 
@@ -311,7 +311,7 @@ def test_enrich_with_ai_skips_unknown_subtype():
 def test_enrich_with_ai_includes_website_in_context():
     candidate = LeadCandidate(name='Gallery X', type='gallery', city='Augsburg',
                               website='https://gallery-x.de')
-    with patch('artcrm.engine.lead_scout.call_ai', return_value=AI_ENRICH_RESPONSE) as mock_ai:
+    with patch('src.engine.lead_scout.call_ai', return_value=AI_ENRICH_RESPONSE) as mock_ai:
         enrich_with_ai(candidate, model='deepseek-chat')
     prompt = mock_ai.call_args[0][0]
     assert 'gallery-x.de' in prompt
@@ -322,20 +322,20 @@ def test_enrich_with_ai_includes_website_in_context():
 # ---------------------------------------------------------------------------
 
 def test_check_duplicate_returns_none_when_no_match():
-    with patch('artcrm.engine.lead_scout.crm.search_contacts', return_value=[]):
+    with patch('src.engine.lead_scout.crm.search_contacts', return_value=[]):
         result = check_duplicate(SAMPLE_CANDIDATE)
     assert result is None
 
 
 def test_check_duplicate_returns_contact_on_exact_match():
-    with patch('artcrm.engine.lead_scout.crm.search_contacts', return_value=[SAMPLE_CONTACT]):
+    with patch('src.engine.lead_scout.crm.search_contacts', return_value=[SAMPLE_CONTACT]):
         result = check_duplicate(SAMPLE_CANDIDATE)
     assert result == SAMPLE_CONTACT
 
 
 def test_check_duplicate_is_case_insensitive():
     candidate = LeadCandidate(name='galerie am stadtpark', city='Augsburg', type='gallery')
-    with patch('artcrm.engine.lead_scout.crm.search_contacts', return_value=[SAMPLE_CONTACT]):
+    with patch('src.engine.lead_scout.crm.search_contacts', return_value=[SAMPLE_CONTACT]):
         result = check_duplicate(candidate)
     assert result == SAMPLE_CONTACT
 
@@ -343,7 +343,7 @@ def test_check_duplicate_is_case_insensitive():
 def test_check_duplicate_returns_none_on_partial_match_only():
     other_contact = Contact(id=2, name='Galerie am Stadtpark Nord', city='Augsburg',
                             status='cold', preferred_language='de')
-    with patch('artcrm.engine.lead_scout.crm.search_contacts', return_value=[other_contact]):
+    with patch('src.engine.lead_scout.crm.search_contacts', return_value=[other_contact]):
         result = check_duplicate(SAMPLE_CANDIDATE)
     assert result is None
 
@@ -353,14 +353,14 @@ def test_check_duplicate_returns_none_on_partial_match_only():
 # ---------------------------------------------------------------------------
 
 def test_insert_lead_skips_duplicate_when_skip_is_true():
-    with patch('artcrm.engine.lead_scout.check_duplicate', return_value=SAMPLE_CONTACT):
+    with patch('src.engine.lead_scout.check_duplicate', return_value=SAMPLE_CONTACT):
         result = insert_lead(SAMPLE_CANDIDATE, skip_if_exists=True)
     assert result is None
 
 
 def test_insert_lead_returns_existing_id_when_skip_false():
-    with patch('artcrm.engine.lead_scout.check_duplicate', return_value=SAMPLE_CONTACT), \
-         patch('artcrm.engine.lead_scout.crm.update_contact', return_value=True):
+    with patch('src.engine.lead_scout.check_duplicate', return_value=SAMPLE_CONTACT), \
+         patch('src.engine.lead_scout.crm.update_contact', return_value=True):
         result = insert_lead(SAMPLE_CANDIDATE, skip_if_exists=False)
     assert result == SAMPLE_CONTACT.id
 
@@ -372,8 +372,8 @@ def test_insert_lead_updates_empty_fields_on_existing():
     candidate = LeadCandidate(name='Galerie am Stadtpark', city='Augsburg',
                               website='https://new.de', email='new@g.de',
                               phone='+49123', address='Str. 1')
-    with patch('artcrm.engine.lead_scout.check_duplicate', return_value=existing), \
-         patch('artcrm.engine.lead_scout.crm.update_contact') as mock_update:
+    with patch('src.engine.lead_scout.check_duplicate', return_value=existing), \
+         patch('src.engine.lead_scout.crm.update_contact') as mock_update:
         insert_lead(candidate, skip_if_exists=False)
     updates = mock_update.call_args[0][1]
     assert 'website' in updates
@@ -388,8 +388,8 @@ def test_insert_lead_does_not_overwrite_existing_fields():
                        status='cold', preferred_language='de')
     candidate = LeadCandidate(name='Galerie am Stadtpark', city='Augsburg',
                               website='https://new.de')
-    with patch('artcrm.engine.lead_scout.check_duplicate', return_value=existing), \
-         patch('artcrm.engine.lead_scout.crm.update_contact') as mock_update:
+    with patch('src.engine.lead_scout.check_duplicate', return_value=existing), \
+         patch('src.engine.lead_scout.crm.update_contact') as mock_update:
         insert_lead(candidate, skip_if_exists=False)
     if mock_update.called:
         updates = mock_update.call_args[0][1]
@@ -397,24 +397,24 @@ def test_insert_lead_does_not_overwrite_existing_fields():
 
 
 def test_insert_lead_creates_new_contact_when_no_duplicate():
-    with patch('artcrm.engine.lead_scout.check_duplicate', return_value=None), \
-         patch('artcrm.engine.lead_scout.crm.create_contact', return_value=42) as mock_create:
+    with patch('src.engine.lead_scout.check_duplicate', return_value=None), \
+         patch('src.engine.lead_scout.crm.create_contact', return_value=42) as mock_create:
         result = insert_lead(SAMPLE_CANDIDATE)
     assert result == 42
     mock_create.assert_called_once()
 
 
 def test_insert_lead_new_contact_has_lead_unverified_status():
-    with patch('artcrm.engine.lead_scout.check_duplicate', return_value=None), \
-         patch('artcrm.engine.lead_scout.crm.create_contact', return_value=42) as mock_create:
+    with patch('src.engine.lead_scout.check_duplicate', return_value=None), \
+         patch('src.engine.lead_scout.crm.create_contact', return_value=42) as mock_create:
         insert_lead(SAMPLE_CANDIDATE)
     contact = mock_create.call_args[0][0]
     assert contact.status == 'lead_unverified'
 
 
 def test_insert_lead_new_contact_notes_include_source():
-    with patch('artcrm.engine.lead_scout.check_duplicate', return_value=None), \
-         patch('artcrm.engine.lead_scout.crm.create_contact', return_value=1) as mock_create:
+    with patch('src.engine.lead_scout.check_duplicate', return_value=None), \
+         patch('src.engine.lead_scout.crm.create_contact', return_value=1) as mock_create:
         insert_lead(SAMPLE_CANDIDATE)
     contact = mock_create.call_args[0][0]
     assert 'openstreetmap' in contact.notes
@@ -425,14 +425,14 @@ def test_insert_lead_new_contact_notes_include_source():
 # ---------------------------------------------------------------------------
 
 def test_scout_city_returns_stats_dict(tmp_path):
-    with patch('artcrm.engine.lead_scout.search_google_maps', return_value=[]), \
-         patch('artcrm.engine.lead_scout.search_openstreetmap', return_value=[]), \
-         patch('artcrm.engine.lead_scout.enrich_with_ai', side_effect=lambda c, **kw: c), \
-         patch('artcrm.engine.lead_scout.insert_lead', return_value=None), \
-         patch('artcrm.engine.lead_scout.bus.emit'), \
-         patch('artcrm.engine.lead_scout.SCOUT_DIR', tmp_path), \
+    with patch('src.engine.lead_scout.search_google_maps', return_value=[]), \
+         patch('src.engine.lead_scout.search_openstreetmap', return_value=[]), \
+         patch('src.engine.lead_scout.enrich_with_ai', side_effect=lambda c, **kw: c), \
+         patch('src.engine.lead_scout.insert_lead', return_value=None), \
+         patch('src.engine.lead_scout.bus.emit'), \
+         patch('src.engine.lead_scout.SCOUT_DIR', tmp_path), \
          patch('time.sleep'), \
-         patch('artcrm.engine.lead_scout.tqdm', side_effect=lambda x, **kw: x):
+         patch('src.engine.lead_scout.tqdm', side_effect=lambda x, **kw: x):
         result = scout_city('Augsburg', 'DE')
 
     assert 'city' in result
@@ -448,14 +448,14 @@ def test_scout_city_uses_default_business_types(tmp_path):
         searched_types.append(biz_type)
         return []
 
-    with patch('artcrm.engine.lead_scout.search_google_maps', side_effect=mock_gm), \
-         patch('artcrm.engine.lead_scout.search_openstreetmap', return_value=[]), \
-         patch('artcrm.engine.lead_scout.enrich_with_ai', side_effect=lambda c, **kw: c), \
-         patch('artcrm.engine.lead_scout.insert_lead', return_value=None), \
-         patch('artcrm.engine.lead_scout.bus.emit'), \
-         patch('artcrm.engine.lead_scout.SCOUT_DIR', tmp_path), \
+    with patch('src.engine.lead_scout.search_google_maps', side_effect=mock_gm), \
+         patch('src.engine.lead_scout.search_openstreetmap', return_value=[]), \
+         patch('src.engine.lead_scout.enrich_with_ai', side_effect=lambda c, **kw: c), \
+         patch('src.engine.lead_scout.insert_lead', return_value=None), \
+         patch('src.engine.lead_scout.bus.emit'), \
+         patch('src.engine.lead_scout.SCOUT_DIR', tmp_path), \
          patch('time.sleep'), \
-         patch('artcrm.engine.lead_scout.tqdm', side_effect=lambda x, **kw: x):
+         patch('src.engine.lead_scout.tqdm', side_effect=lambda x, **kw: x):
         scout_city('Augsburg')
 
     assert 'gallery' in searched_types
@@ -464,28 +464,28 @@ def test_scout_city_uses_default_business_types(tmp_path):
 
 
 def test_scout_city_skips_google_maps_when_disabled(tmp_path):
-    with patch('artcrm.engine.lead_scout.search_google_maps') as mock_gm, \
-         patch('artcrm.engine.lead_scout.search_openstreetmap', return_value=[]), \
-         patch('artcrm.engine.lead_scout.enrich_with_ai', side_effect=lambda c, **kw: c), \
-         patch('artcrm.engine.lead_scout.insert_lead', return_value=None), \
-         patch('artcrm.engine.lead_scout.bus.emit'), \
-         patch('artcrm.engine.lead_scout.SCOUT_DIR', tmp_path), \
+    with patch('src.engine.lead_scout.search_google_maps') as mock_gm, \
+         patch('src.engine.lead_scout.search_openstreetmap', return_value=[]), \
+         patch('src.engine.lead_scout.enrich_with_ai', side_effect=lambda c, **kw: c), \
+         patch('src.engine.lead_scout.insert_lead', return_value=None), \
+         patch('src.engine.lead_scout.bus.emit'), \
+         patch('src.engine.lead_scout.SCOUT_DIR', tmp_path), \
          patch('time.sleep'), \
-         patch('artcrm.engine.lead_scout.tqdm', side_effect=lambda x, **kw: x):
+         patch('src.engine.lead_scout.tqdm', side_effect=lambda x, **kw: x):
         scout_city('Augsburg', use_google_maps=False)
 
     mock_gm.assert_not_called()
 
 
 def test_scout_city_counts_total_found(tmp_path):
-    with patch('artcrm.engine.lead_scout.search_google_maps', return_value=[SAMPLE_CANDIDATE, SAMPLE_CANDIDATE]), \
-         patch('artcrm.engine.lead_scout.search_openstreetmap', return_value=[]), \
-         patch('artcrm.engine.lead_scout.enrich_with_ai', side_effect=lambda c, **kw: c), \
-         patch('artcrm.engine.lead_scout.insert_lead', return_value=1), \
-         patch('artcrm.engine.lead_scout.bus.emit'), \
-         patch('artcrm.engine.lead_scout.SCOUT_DIR', tmp_path), \
+    with patch('src.engine.lead_scout.search_google_maps', return_value=[SAMPLE_CANDIDATE, SAMPLE_CANDIDATE]), \
+         patch('src.engine.lead_scout.search_openstreetmap', return_value=[]), \
+         patch('src.engine.lead_scout.enrich_with_ai', side_effect=lambda c, **kw: c), \
+         patch('src.engine.lead_scout.insert_lead', return_value=1), \
+         patch('src.engine.lead_scout.bus.emit'), \
+         patch('src.engine.lead_scout.SCOUT_DIR', tmp_path), \
          patch('time.sleep'), \
-         patch('artcrm.engine.lead_scout.tqdm', side_effect=lambda x, **kw: x):
+         patch('src.engine.lead_scout.tqdm', side_effect=lambda x, **kw: x):
         result = scout_city('Augsburg', business_types=['gallery'])
 
     # 2 candidates found for 'gallery' type
@@ -493,14 +493,14 @@ def test_scout_city_counts_total_found(tmp_path):
 
 
 def test_scout_city_counts_skipped(tmp_path):
-    with patch('artcrm.engine.lead_scout.search_google_maps', return_value=[SAMPLE_CANDIDATE]), \
-         patch('artcrm.engine.lead_scout.search_openstreetmap', return_value=[]), \
-         patch('artcrm.engine.lead_scout.enrich_with_ai', side_effect=lambda c, **kw: c), \
-         patch('artcrm.engine.lead_scout.insert_lead', return_value=None),  \
-         patch('artcrm.engine.lead_scout.bus.emit'), \
-         patch('artcrm.engine.lead_scout.SCOUT_DIR', tmp_path), \
+    with patch('src.engine.lead_scout.search_google_maps', return_value=[SAMPLE_CANDIDATE]), \
+         patch('src.engine.lead_scout.search_openstreetmap', return_value=[]), \
+         patch('src.engine.lead_scout.enrich_with_ai', side_effect=lambda c, **kw: c), \
+         patch('src.engine.lead_scout.insert_lead', return_value=None),  \
+         patch('src.engine.lead_scout.bus.emit'), \
+         patch('src.engine.lead_scout.SCOUT_DIR', tmp_path), \
          patch('time.sleep'), \
-         patch('artcrm.engine.lead_scout.tqdm', side_effect=lambda x, **kw: x):
+         patch('src.engine.lead_scout.tqdm', side_effect=lambda x, **kw: x):
         result = scout_city('Augsburg', business_types=['gallery'])
 
     assert result['total_skipped'] == 1
@@ -508,14 +508,14 @@ def test_scout_city_counts_skipped(tmp_path):
 
 
 def test_scout_city_writes_json_results(tmp_path):
-    with patch('artcrm.engine.lead_scout.search_google_maps', return_value=[]), \
-         patch('artcrm.engine.lead_scout.search_openstreetmap', return_value=[]), \
-         patch('artcrm.engine.lead_scout.enrich_with_ai', side_effect=lambda c, **kw: c), \
-         patch('artcrm.engine.lead_scout.insert_lead', return_value=None), \
-         patch('artcrm.engine.lead_scout.bus.emit'), \
-         patch('artcrm.engine.lead_scout.SCOUT_DIR', tmp_path), \
+    with patch('src.engine.lead_scout.search_google_maps', return_value=[]), \
+         patch('src.engine.lead_scout.search_openstreetmap', return_value=[]), \
+         patch('src.engine.lead_scout.enrich_with_ai', side_effect=lambda c, **kw: c), \
+         patch('src.engine.lead_scout.insert_lead', return_value=None), \
+         patch('src.engine.lead_scout.bus.emit'), \
+         patch('src.engine.lead_scout.SCOUT_DIR', tmp_path), \
          patch('time.sleep'), \
-         patch('artcrm.engine.lead_scout.tqdm', side_effect=lambda x, **kw: x):
+         patch('src.engine.lead_scout.tqdm', side_effect=lambda x, **kw: x):
         scout_city('Augsburg', 'DE')
 
     json_files = list(tmp_path.glob('scout_Augsburg_DE_*.json'))
@@ -526,14 +526,14 @@ def test_scout_city_writes_json_results(tmp_path):
 
 
 def test_scout_city_emits_scout_complete_event(tmp_path):
-    with patch('artcrm.engine.lead_scout.search_google_maps', return_value=[]), \
-         patch('artcrm.engine.lead_scout.search_openstreetmap', return_value=[]), \
-         patch('artcrm.engine.lead_scout.enrich_with_ai', side_effect=lambda c, **kw: c), \
-         patch('artcrm.engine.lead_scout.insert_lead', return_value=None), \
-         patch('artcrm.engine.lead_scout.bus.emit') as mock_emit, \
-         patch('artcrm.engine.lead_scout.SCOUT_DIR', tmp_path), \
+    with patch('src.engine.lead_scout.search_google_maps', return_value=[]), \
+         patch('src.engine.lead_scout.search_openstreetmap', return_value=[]), \
+         patch('src.engine.lead_scout.enrich_with_ai', side_effect=lambda c, **kw: c), \
+         patch('src.engine.lead_scout.insert_lead', return_value=None), \
+         patch('src.engine.lead_scout.bus.emit') as mock_emit, \
+         patch('src.engine.lead_scout.SCOUT_DIR', tmp_path), \
          patch('time.sleep'), \
-         patch('artcrm.engine.lead_scout.tqdm', side_effect=lambda x, **kw: x):
+         patch('src.engine.lead_scout.tqdm', side_effect=lambda x, **kw: x):
         scout_city('Augsburg', 'DE')
 
     mock_emit.assert_called_once()
@@ -541,14 +541,14 @@ def test_scout_city_emits_scout_complete_event(tmp_path):
 
 
 def test_scout_city_osm_used_as_fallback_when_few_gm_results(tmp_path):
-    with patch('artcrm.engine.lead_scout.search_google_maps', return_value=[SAMPLE_CANDIDATE]), \
-         patch('artcrm.engine.lead_scout.search_openstreetmap', return_value=[]) as mock_osm, \
-         patch('artcrm.engine.lead_scout.enrich_with_ai', side_effect=lambda c, **kw: c), \
-         patch('artcrm.engine.lead_scout.insert_lead', return_value=None), \
-         patch('artcrm.engine.lead_scout.bus.emit'), \
-         patch('artcrm.engine.lead_scout.SCOUT_DIR', tmp_path), \
+    with patch('src.engine.lead_scout.search_google_maps', return_value=[SAMPLE_CANDIDATE]), \
+         patch('src.engine.lead_scout.search_openstreetmap', return_value=[]) as mock_osm, \
+         patch('src.engine.lead_scout.enrich_with_ai', side_effect=lambda c, **kw: c), \
+         patch('src.engine.lead_scout.insert_lead', return_value=None), \
+         patch('src.engine.lead_scout.bus.emit'), \
+         patch('src.engine.lead_scout.SCOUT_DIR', tmp_path), \
          patch('time.sleep'), \
-         patch('artcrm.engine.lead_scout.tqdm', side_effect=lambda x, **kw: x):
+         patch('src.engine.lead_scout.tqdm', side_effect=lambda x, **kw: x):
         # 1 GM result < 5 threshold → OSM should be called
         scout_city('Augsburg', business_types=['gallery'], use_google_maps=True, use_osm=True)
 

@@ -1,5 +1,5 @@
 """
-Unit tests for artcrm/logging_config.py.
+Unit tests for src/logging_config.py.
 
 Tests configure_logging (idempotency, dir creation, level, handler type)
 and log_call (entry/exit/failure logging, return value pass-through, re-raise).
@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from artcrm.logging_config import configure_logging, log_call
+from src.logging_config import configure_logging, log_call
 
 
 # ---------------------------------------------------------------------------
@@ -20,8 +20,8 @@ from artcrm.logging_config import configure_logging, log_call
 # ---------------------------------------------------------------------------
 
 def _clear_artcrm_logger():
-    """Close and remove all handlers from the artcrm logger."""
-    logger = logging.getLogger("artcrm")
+    """Close and remove all handlers from the src logger."""
+    logger = logging.getLogger("src")
     for h in logger.handlers[:]:
         h.close()
         logger.removeHandler(h)
@@ -41,69 +41,69 @@ class TestConfigureLogging:
         _clear_artcrm_logger()
 
     def test_returns_logger(self, tmp_path):
-        with patch("artcrm.logging_config._LOG_DIR", tmp_path), \
-             patch("artcrm.logging_config._LOG_FILE", tmp_path / "artcrm.log"):
+        with patch("src.logging_config._LOG_DIR", tmp_path), \
+             patch("src.logging_config._LOG_FILE", tmp_path / "src.log"):
             result = configure_logging()
         assert isinstance(result, logging.Logger)
-        assert result.name == "artcrm"
+        assert result.name == "src"
 
     def test_creates_log_dir_if_missing(self, tmp_path):
         log_dir = tmp_path / "logs"
         assert not log_dir.exists()
-        with patch("artcrm.logging_config._LOG_DIR", log_dir), \
-             patch("artcrm.logging_config._LOG_FILE", log_dir / "artcrm.log"):
+        with patch("src.logging_config._LOG_DIR", log_dir), \
+             patch("src.logging_config._LOG_FILE", log_dir / "src.log"):
             configure_logging()
         assert log_dir.exists()
 
     def test_existing_log_dir_does_not_raise(self, tmp_path):
-        with patch("artcrm.logging_config._LOG_DIR", tmp_path), \
-             patch("artcrm.logging_config._LOG_FILE", tmp_path / "artcrm.log"):
+        with patch("src.logging_config._LOG_DIR", tmp_path), \
+             patch("src.logging_config._LOG_FILE", tmp_path / "src.log"):
             configure_logging()  # tmp_path already exists — should not raise
 
     def test_adds_rotating_file_handler(self, tmp_path):
-        with patch("artcrm.logging_config._LOG_DIR", tmp_path), \
-             patch("artcrm.logging_config._LOG_FILE", tmp_path / "artcrm.log"):
+        with patch("src.logging_config._LOG_DIR", tmp_path), \
+             patch("src.logging_config._LOG_FILE", tmp_path / "src.log"):
             configure_logging()
-        logger = logging.getLogger("artcrm")
+        logger = logging.getLogger("src")
         assert len(logger.handlers) == 1
         assert isinstance(logger.handlers[0], logging.handlers.RotatingFileHandler)
 
     def test_idempotent_does_not_add_duplicate_handlers(self, tmp_path):
-        with patch("artcrm.logging_config._LOG_DIR", tmp_path), \
-             patch("artcrm.logging_config._LOG_FILE", tmp_path / "artcrm.log"):
+        with patch("src.logging_config._LOG_DIR", tmp_path), \
+             patch("src.logging_config._LOG_FILE", tmp_path / "src.log"):
             configure_logging()
             configure_logging()
             configure_logging()
-        assert len(logging.getLogger("artcrm").handlers) == 1
+        assert len(logging.getLogger("src").handlers) == 1
 
     def test_default_level_is_info(self, tmp_path):
         env = {k: v for k, v in os.environ.items() if k != "LOG_LEVEL"}
         with patch.dict(os.environ, env, clear=True), \
-             patch("artcrm.logging_config._LOG_DIR", tmp_path), \
-             patch("artcrm.logging_config._LOG_FILE", tmp_path / "artcrm.log"):
+             patch("src.logging_config._LOG_DIR", tmp_path), \
+             patch("src.logging_config._LOG_FILE", tmp_path / "src.log"):
             configure_logging()
-        assert logging.getLogger("artcrm").level == logging.INFO
+        assert logging.getLogger("src").level == logging.INFO
 
     def test_respects_log_level_debug(self, tmp_path):
         with patch.dict(os.environ, {"LOG_LEVEL": "DEBUG"}), \
-             patch("artcrm.logging_config._LOG_DIR", tmp_path), \
-             patch("artcrm.logging_config._LOG_FILE", tmp_path / "artcrm.log"):
+             patch("src.logging_config._LOG_DIR", tmp_path), \
+             patch("src.logging_config._LOG_FILE", tmp_path / "src.log"):
             configure_logging()
-        assert logging.getLogger("artcrm").level == logging.DEBUG
+        assert logging.getLogger("src").level == logging.DEBUG
 
     def test_respects_log_level_warning(self, tmp_path):
         with patch.dict(os.environ, {"LOG_LEVEL": "WARNING"}), \
-             patch("artcrm.logging_config._LOG_DIR", tmp_path), \
-             patch("artcrm.logging_config._LOG_FILE", tmp_path / "artcrm.log"):
+             patch("src.logging_config._LOG_DIR", tmp_path), \
+             patch("src.logging_config._LOG_FILE", tmp_path / "src.log"):
             configure_logging()
-        assert logging.getLogger("artcrm").level == logging.WARNING
+        assert logging.getLogger("src").level == logging.WARNING
 
     def test_invalid_log_level_falls_back_to_info(self, tmp_path):
         with patch.dict(os.environ, {"LOG_LEVEL": "BOGUS"}), \
-             patch("artcrm.logging_config._LOG_DIR", tmp_path), \
-             patch("artcrm.logging_config._LOG_FILE", tmp_path / "artcrm.log"):
+             patch("src.logging_config._LOG_DIR", tmp_path), \
+             patch("src.logging_config._LOG_FILE", tmp_path / "src.log"):
             configure_logging()
-        assert logging.getLogger("artcrm").level == logging.INFO
+        assert logging.getLogger("src").level == logging.INFO
 
 
 # ---------------------------------------------------------------------------
@@ -132,7 +132,7 @@ class TestLogCall:
             return f"hello {name}"
 
         mock_logger = MagicMock()
-        with patch("artcrm.logging_config.logging") as mock_logging:
+        with patch("src.logging_config.logging") as mock_logging:
             mock_logging.getLogger.return_value = mock_logger
             greet("Alice")
 
@@ -147,7 +147,7 @@ class TestLogCall:
             pass
 
         mock_logger = MagicMock()
-        with patch("artcrm.logging_config.logging") as mock_logging:
+        with patch("src.logging_config.logging") as mock_logging:
             mock_logging.getLogger.return_value = mock_logger
             func(1, 2)
 
@@ -161,7 +161,7 @@ class TestLogCall:
             return x + y
 
         mock_logger = MagicMock()
-        with patch("artcrm.logging_config.logging") as mock_logging:
+        with patch("src.logging_config.logging") as mock_logging:
             mock_logging.getLogger.return_value = mock_logger
             func(1, y=99)
 
@@ -174,7 +174,7 @@ class TestLogCall:
             pass
 
         mock_logger = MagicMock()
-        with patch("artcrm.logging_config.logging") as mock_logging:
+        with patch("src.logging_config.logging") as mock_logging:
             mock_logging.getLogger.return_value = mock_logger
             func()
 
@@ -187,7 +187,7 @@ class TestLogCall:
             pass
 
         mock_logger = MagicMock()
-        with patch("artcrm.logging_config.logging") as mock_logging:
+        with patch("src.logging_config.logging") as mock_logging:
             mock_logging.getLogger.return_value = mock_logger
             noop()
 
@@ -202,7 +202,7 @@ class TestLogCall:
             pass
 
         mock_logger = MagicMock()
-        with patch("artcrm.logging_config.logging") as mock_logging:
+        with patch("src.logging_config.logging") as mock_logging:
             mock_logging.getLogger.return_value = mock_logger
             noop()
 
@@ -215,7 +215,7 @@ class TestLogCall:
             raise ValueError("bad input")
 
         mock_logger = MagicMock()
-        with patch("artcrm.logging_config.logging") as mock_logging:
+        with patch("src.logging_config.logging") as mock_logging:
             mock_logging.getLogger.return_value = mock_logger
             with pytest.raises(ValueError):
                 boom()
@@ -233,7 +233,7 @@ class TestLogCall:
             raise RuntimeError("oops")
 
         mock_logger = MagicMock()
-        with patch("artcrm.logging_config.logging") as mock_logging:
+        with patch("src.logging_config.logging") as mock_logging:
             mock_logging.getLogger.return_value = mock_logger
             with pytest.raises(RuntimeError):
                 boom()
@@ -246,7 +246,7 @@ class TestLogCall:
         def boom():
             raise RuntimeError("oops")
 
-        with patch("artcrm.logging_config.logging") as mock_logging:
+        with patch("src.logging_config.logging") as mock_logging:
             mock_logging.getLogger.return_value = MagicMock()
             with pytest.raises(RuntimeError, match="oops"):
                 boom()
@@ -257,7 +257,7 @@ class TestLogCall:
             raise ValueError("bad")
 
         mock_logger = MagicMock()
-        with patch("artcrm.logging_config.logging") as mock_logging:
+        with patch("src.logging_config.logging") as mock_logging:
             mock_logging.getLogger.return_value = mock_logger
             with pytest.raises(ValueError):
                 boom()

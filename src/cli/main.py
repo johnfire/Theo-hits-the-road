@@ -10,9 +10,9 @@ import click
 from datetime import date, timedelta
 from typing import Optional
 
-from artcrm.engine import crm
-from artcrm.models import Contact, Interaction, Show
-from artcrm.logging_config import configure_logging, log_call
+from src.engine import crm
+from src.models import Contact, Interaction, Show
+from src.logging_config import configure_logging, log_call
 
 _EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
 
@@ -22,7 +22,7 @@ AI_MODEL_CHOICES = ['claude', 'deepseek-chat', 'deepseek-reasoner']
 @log_call
 def _prompt_date(label: str, default: Optional[date] = None) -> Optional[date]:
     """Prompt for a date, re-prompting on bad format. Returns None if left blank."""
-    logger = logging.getLogger("artcrm")
+    logger = logging.getLogger("src")
     default_str = str(default) if default else ""
     while True:
         raw = click.prompt(label, default=default_str, show_default=bool(default_str)) or ""
@@ -38,7 +38,7 @@ def _prompt_date(label: str, default: Optional[date] = None) -> Optional[date]:
 @log_call
 def _prompt_email() -> Optional[str]:
     """Prompt for an email address, re-prompting on bad format. Returns None if left blank."""
-    logger = logging.getLogger("artcrm")
+    logger = logging.getLogger("src")
     while True:
         raw = click.prompt("Email", default="", show_default=False) or None
         if raw is None:
@@ -101,7 +101,7 @@ def contacts_list(type, status, city, limit):
 @log_call
 def contacts_show(contact_id):
     """Show full contact details"""
-    logger = logging.getLogger("artcrm")
+    logger = logging.getLogger("src")
     contact = crm.get_contact(contact_id)
 
     if not contact:
@@ -188,7 +188,7 @@ def contacts_add():
 @log_call
 def contacts_log(contact_id):
     """Log an interaction with a contact"""
-    logger = logging.getLogger("artcrm")
+    logger = logging.getLogger("src")
 
     # Verify contact exists
     contact = crm.get_contact(contact_id)
@@ -245,7 +245,7 @@ def contacts_log(contact_id):
 @log_call
 def contacts_edit(contact_id, status, email, website, notes):
     """Edit a contact (use options to set fields)"""
-    logger = logging.getLogger("artcrm")
+    logger = logging.getLogger("src")
     updates = {}
     if status:
         updates['status'] = status
@@ -385,7 +385,7 @@ def dormant():
 def brief(model):
     """AI daily brief - who to contact this week"""
     try:
-        from artcrm.engine import ai_planner
+        from src.engine import ai_planner
 
         click.echo(f"\nGenerating AI daily brief [{model}]...\n")
         result = ai_planner.generate_daily_brief(model=model)
@@ -393,7 +393,7 @@ def brief(model):
         click.echo()
 
     except Exception as e:
-        logging.getLogger("artcrm").error(f"brief command failed: {e}", exc_info=True)
+        logging.getLogger("src").error(f"brief command failed: {e}", exc_info=True)
         click.echo(f"Error: {e}", err=True)
 
 
@@ -405,7 +405,7 @@ def brief(model):
 def score(contact_id, model):
     """AI fit score for a contact"""
     try:
-        from artcrm.engine import ai_planner
+        from src.engine import ai_planner
 
         click.echo(f"\nAnalyzing contact #{contact_id} [{model}]...\n")
         result = ai_planner.score_contact_fit(contact_id, model=model)
@@ -416,7 +416,7 @@ def score(contact_id, model):
         click.echo()
 
     except Exception as e:
-        logging.getLogger("artcrm").error(f"score command failed for contact {contact_id}: {e}", exc_info=True)
+        logging.getLogger("src").error(f"score command failed for contact {contact_id}: {e}", exc_info=True)
         click.echo(f"Error: {e}", err=True)
 
 
@@ -428,7 +428,7 @@ def score(contact_id, model):
 def suggest(limit, model):
     """AI suggests next contacts to reach out to"""
     try:
-        from artcrm.engine import ai_planner
+        from src.engine import ai_planner
 
         click.echo(f"\nGetting AI suggestions for next {limit} contacts [{model}]...\n")
         results = ai_planner.suggest_next_contacts(limit=limit, model=model)
@@ -440,7 +440,7 @@ def suggest(limit, model):
             click.echo()
 
     except Exception as e:
-        logging.getLogger("artcrm").error(f"suggest command failed: {e}", exc_info=True)
+        logging.getLogger("src").error(f"suggest command failed: {e}", exc_info=True)
         click.echo(f"Error: {e}", err=True)
 
 
@@ -454,7 +454,7 @@ def suggest(limit, model):
 def draft(contact_id, language, no_portfolio, model):
     """Draft a first contact letter via AI"""
     try:
-        from artcrm.engine import email_composer
+        from src.engine import email_composer
 
         click.echo(f"\nDrafting first contact letter for contact #{contact_id} [{model}]...\n")
 
@@ -476,14 +476,14 @@ def draft(contact_id, language, no_portfolio, model):
         click.echo()
 
     except ValueError as e:
-        logging.getLogger("artcrm").warning(f"draft failed for contact {contact_id}: {e}")
+        logging.getLogger("src").warning(f"draft failed for contact {contact_id}: {e}")
         click.echo(f"Error: {e}", err=True)
     except RuntimeError as e:
-        logging.getLogger("artcrm").error(f"draft API error for contact {contact_id}: {e}", exc_info=True)
+        logging.getLogger("src").error(f"draft API error for contact {contact_id}: {e}", exc_info=True)
         click.echo(f"API Error: {e}", err=True)
         click.echo("Make sure ANTHROPIC_API_KEY / DEEPSEEK_API_KEY is set in .env", err=True)
     except Exception as e:
-        logging.getLogger("artcrm").error(f"draft unexpected error for contact {contact_id}: {e}", exc_info=True)
+        logging.getLogger("src").error(f"draft unexpected error for contact {contact_id}: {e}", exc_info=True)
         click.echo(f"Unexpected error: {e}", err=True)
 
 
@@ -496,7 +496,7 @@ def draft(contact_id, language, no_portfolio, model):
 def followup(contact_id, language, model):
     """Draft a follow-up letter via AI"""
     try:
-        from artcrm.engine import email_composer
+        from src.engine import email_composer
 
         # Prompt user for context about last interaction
         click.echo(f"\nDrafting follow-up letter for contact #{contact_id} [{model}]...\n")
@@ -525,14 +525,14 @@ def followup(contact_id, language, model):
         click.echo()
 
     except ValueError as e:
-        logging.getLogger("artcrm").warning(f"followup failed for contact {contact_id}: {e}")
+        logging.getLogger("src").warning(f"followup failed for contact {contact_id}: {e}")
         click.echo(f"Error: {e}", err=True)
     except RuntimeError as e:
-        logging.getLogger("artcrm").error(f"followup API error for contact {contact_id}: {e}", exc_info=True)
+        logging.getLogger("src").error(f"followup API error for contact {contact_id}: {e}", exc_info=True)
         click.echo(f"API Error: {e}", err=True)
         click.echo("Make sure ANTHROPIC_API_KEY / DEEPSEEK_API_KEY is set in .env", err=True)
     except Exception as e:
-        logging.getLogger("artcrm").error(f"followup unexpected error for contact {contact_id}: {e}", exc_info=True)
+        logging.getLogger("src").error(f"followup unexpected error for contact {contact_id}: {e}", exc_info=True)
         click.echo(f"Unexpected error: {e}", err=True)
 
 
@@ -553,7 +553,7 @@ def followup(contact_id, language, model):
 def recon(city, country, types, radius, model, no_google, no_osm):
     """Scout a city for potential leads (galleries, cafes, coworking spaces)"""
     try:
-        from artcrm.engine import lead_scout
+        from src.engine import lead_scout
 
         click.echo(f"\n🎯 Starting reconnaissance mission for {city}, {country}\n")
 
@@ -619,11 +619,11 @@ def recon(city, country, types, radius, model, no_google, no_osm):
         click.echo()
 
     except ImportError as e:
-        logging.getLogger("artcrm").error(f"recon failed: missing dependency: {e}")
+        logging.getLogger("src").error(f"recon failed: missing dependency: {e}")
         click.echo(f"Error: Missing dependencies. Run: pip install -r requirements.txt", err=True)
         click.echo(f"Details: {e}", err=True)
     except Exception as e:
-        logging.getLogger("artcrm").error(f"recon failed for {city}, {country}: {e}", exc_info=True)
+        logging.getLogger("src").error(f"recon failed for {city}, {country}: {e}", exc_info=True)
         click.echo(f"Error: {e}", err=True)
 
 

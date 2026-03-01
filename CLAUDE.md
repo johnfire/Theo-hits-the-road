@@ -32,13 +32,13 @@ online channels, and contact history. Full architecture in docs/art_crm_architec
 
 ## Project Structure
 ```
-artcrm/
+src/
 ├── CLAUDE.md                  ← this file
 ├── docs/
 │   └── art_crm_architecture.docx
 ├── data/
 │   └── art-marketing.xlsx     ← source spreadsheet for import
-├── artcrm/                    ← main Python package
+├── src/                    ← main Python package
 │   ├── __init__.py
 │   ├── config.py              ← env vars, settings
 │   ├── db/
@@ -99,7 +99,7 @@ SELECT value FROM lookup_values WHERE category = 'contact_type' AND active = TRU
 - `people`          — individual collectors (Phase 2+, table defined in schema from Phase 1)
 
 ### Migration Strategy
-Each migration is a numbered SQL file in `artcrm/db/migrations/`.
+Each migration is a numbered SQL file in `src/db/migrations/`.
 Format: `001_initial_schema.sql`, `002_seed_lookup_values.sql`, etc.
 A simple migration runner applies them in order, tracking which have run in a
 `schema_migrations` table.
@@ -111,11 +111,11 @@ Modules do NOT import each other. They communicate only through the event bus.
 
 ```python
 # CORRECT
-from artcrm.bus.events import bus
+from src.bus.events import bus
 bus.emit('contact_updated', {'contact_id': 42})
 
 # WRONG — never do this
-from artcrm.engine.ai_planner import reanalyse_contact
+from src.engine.ai_planner import reanalyse_contact
 reanalyse_contact(42)
 ```
 

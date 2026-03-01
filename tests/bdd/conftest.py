@@ -19,7 +19,7 @@ def runner():
 
 @pytest.fixture
 def mock_crm():
-    with patch("artcrm.cli.main.crm") as mock:
+    with patch("src.cli.main.crm") as mock:
         yield mock
 
 
@@ -31,7 +31,7 @@ def context():
 
 @pytest.fixture(autouse=True)
 def no_logging():
-    with patch("artcrm.cli.main.configure_logging"):
+    with patch("src.cli.main.configure_logging"):
         yield
 
 

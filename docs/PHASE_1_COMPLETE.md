@@ -9,8 +9,8 @@
 Created the complete directory structure as specified in CLAUDE.md:
 
 ```
-artcrm/
-├── artcrm/               ← Main Python package
+src/
+├── src/               ← Main Python package
 │   ├── db/
 │   │   └── migrations/   ← SQL migration files
 │   ├── models/
@@ -34,7 +34,7 @@ artcrm/
 
 ### 2. Database Schema Files
 
-#### [001_initial_schema.sql](../artcrm/db/migrations/001_initial_schema.sql)
+#### [001_initial_schema.sql](../src/db/migrations/001_initial_schema.sql)
 Complete database schema with:
 - **schema_migrations** table with full tracking (timestamps, checksums, rollback capability)
 - **lookup_values** table for extensible categorical fields
@@ -48,7 +48,7 @@ Complete database schema with:
 - Full-text search index for contacts (German language)
 - Verification checks to ensure migration success
 
-#### [002_seed_lookup_values.sql](../artcrm/db/migrations/002_seed_lookup_values.sql)
+#### [002_seed_lookup_values.sql](../src/db/migrations/002_seed_lookup_values.sql)
 Minimal seed data for 7 categories:
 - **contact_type**: 10 values (gallery, cafe, hotel, office, restaurant, coworking_space, online_platform, museum, corporate, other)
 - **contact_subtype**: 7 values (upscale, hippy, commercial, contemporary, traditional, tourist, local)
@@ -64,7 +64,7 @@ All values include German and English labels for UI flexibility.
 
 #### [.env.example](../.env.example)
 Environment variable template with:
-- Database credentials: `artcrm` / `artcrm_admindude` / `aw4e0rfeA1!Q`
+- Database credentials: `src` / `artcrm_admindude` / `aw4e0rfeA1!Q`
 - Timezone: Europe/Berlin
 - Ollama configuration (placeholder for Phase 5)
 - Claude API configuration (placeholder for Phase 6)
@@ -92,7 +92,7 @@ Complete PostgreSQL installation and setup guide including:
 - VPS deployment notes
 - Backup and restore commands
 
-#### [migrations/README.md](../artcrm/db/migrations/README.md)
+#### [migrations/README.md](../src/db/migrations/README.md)
 Migration documentation including:
 - How to run migrations manually
 - Verification queries
@@ -160,8 +160,8 @@ GRANT ALL PRIVILEGES ON DATABASE artcrm TO artcrm_admindude;
 ```bash
 cd /home/christopher/programming/theo-hits-the-road
 
-psql -U artcrm_admindude -d artcrm -h localhost -f artcrm/db/migrations/001_initial_schema.sql
-psql -U artcrm_admindude -d artcrm -h localhost -f artcrm/db/migrations/002_seed_lookup_values.sql
+psql -U artcrm_admindude -d artcrm -h localhost -f src/db/migrations/001_initial_schema.sql
+psql -U artcrm_admindude -d artcrm -h localhost -f src/db/migrations/002_seed_lookup_values.sql
 ```
 
 ### 4. Verify
@@ -173,7 +173,7 @@ psql -U artcrm_admindude -d artcrm -h localhost -c "SELECT category, COUNT(*) FR
 ## Testing Checklist
 
 - [ ] PostgreSQL is installed and running
-- [ ] Database `artcrm` exists
+- [ ] Database `src` exists
 - [ ] User `artcrm_admindude` can connect
 - [ ] Migration 001 runs without errors
 - [ ] Migration 002 runs without errors
