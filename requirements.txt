@@ -22,6 +22,9 @@ googlemaps==4.10.0    # Google Maps Places API client
 beautifulsoup4==4.12.3  # HTML parsing for web scraping
 tqdm==4.66.4          # Progress bars (4.66.1 had CVE-2024-34062)
 
+# MCP Server
+mcp>=1.26.0             # Model Context Protocol server (FastMCP)
+
 # Testing
 pytest==7.4.3         # Testing framework
 pytest-cov==4.1.0     # Coverage reporting

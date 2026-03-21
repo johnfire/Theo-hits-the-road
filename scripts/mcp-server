@@ -1,0 +1,19 @@
+#!/bin/bash
+# Art CRM MCP Server Launcher
+# Starts the MCP server via stdio transport for Claude Desktop / Claude Code.
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_ROOT"
+
+if [ -z "$VIRTUAL_ENV" ]; then
+    source venv/bin/activate
+fi
+
+python3 -c "
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd()))
+from src.mcp.server import server
+server.run()
+" "$@"
