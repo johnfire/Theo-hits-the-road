@@ -5,8 +5,10 @@ Exposes CRM engine functions as MCP tools for Claude Desktop, Claude Code, and o
 
 import json
 import logging
+import os
 from datetime import date
 
+import psycopg2
 from mcp.server.fastmcp import FastMCP
 
 from src.logging_config import configure_logging
@@ -348,6 +350,22 @@ def draft_first_contact(
             language=language or None,
             include_portfolio_link=include_portfolio_link,
         )
+        # Also insert into approval_queue so it appears in the supervisor UI
+        db_url = os.environ.get("DATABASE_URL", "")
+        if db_url and result.get("subject") and result.get("body"):
+            try:
+                conn = psycopg2.connect(db_url)
+                cur = conn.cursor()
+                cur.execute("""
+                    INSERT INTO approval_queue (contact_id, draft_subject, draft_body, status)
+                    VALUES (%s, %s, %s, 'pending')
+                """, (contact_id, result["subject"], result["body"]))
+                conn.commit()
+                conn.close()
+                result["queued"] = True
+            except Exception as qe:
+                logger.warning(f"draft_first_contact: could not insert into approval_queue: {qe}")
+                result["queued"] = False
         return json.dumps(result)
     except Exception as e:
         logger.error(f"draft_first_contact failed: {e}")
