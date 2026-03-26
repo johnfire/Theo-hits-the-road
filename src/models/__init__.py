@@ -27,6 +27,7 @@ class Contact:
     success_probability: Optional[int] = None
     best_visit_time: Optional[str] = None
     notes: Optional[str] = None
+    flagged: bool = False
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     deleted_at: Optional[datetime] = None
